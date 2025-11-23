@@ -1,8 +1,6 @@
 import numpy as np
 from OpenGL.GL import *
 from config import config
-# import ctypes
-# import math
 
 def create_vector_grid(width=640, height=480, default=(0, 0)):
     """返回一个 height x width 的二维列表，每个元素为一个二位向量（tuple）。"""
