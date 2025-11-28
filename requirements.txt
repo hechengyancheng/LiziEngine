@@ -1,0 +1,7 @@
+# LiziEngine 依赖包
+# pip install -r requirements.txt
+numpy>=1.21.0
+glfw>=2.5.0
+PyOpenGL>=3.1.6
+imgui[glfw]>=2.0.0
+pyopencl>=2021.1.0
