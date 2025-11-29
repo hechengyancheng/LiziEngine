@@ -337,7 +337,10 @@ class WindowManager:
             brush_size = config_manager.get("vector_field.default_brush_size", 1)
 
             # 获取是否反转向量
-            reverse_vector = config_manager.get("vector_field.reverse_vector", False)
+            reverse_vector = self._state_manager.get("reverse_vector", False)
+            
+            # 获取向量模式（0=辐射状, 1=单一方向, 2=顺时针旋转）
+            vector_mode = self._state_manager.get("vector_mode", 0)
 
             # 应用画笔效果
             updates = {}
@@ -359,22 +362,75 @@ class WindowManager:
                             # 根据距离调整向量大小的影响
                             influence = 1.0 - (dist / brush_size)
 
-                            # 计算新向量 - 基于现有向量调整大小
-                            if reverse_vector:
-                                # 如果需要反转，则反转现有向量并调整大小
-                                new_vx = -current_vx * influence * magnitude
-                                new_vy = -current_vy * influence * magnitude
-                            else:
-                                # 否则，保持方向，只调整大小
-                                current_length = np.sqrt(current_vx**2 + current_vy**2)
-                                if current_length > 0:
-                                    # 保持方向，调整大小
-                                    new_vx = (current_vx / current_length) * influence * magnitude
-                                    new_vy = (current_vy / current_length) * influence * magnitude
+                            # 根据向量模式计算新向量
+                            if vector_mode == 0:
+                                # 辐射状模式 - 以鼠标为中心，默认朝外
+                                # 计算从鼠标位置到目标点的向量
+                                dx = target_x - grid_x
+                                dy = target_y - grid_y
+
+                                # 计算距离
+                                point_dist = np.sqrt(dx**2 + dy**2)
+
+                                if point_dist > 0.001:  # 避免除以零
+                                    # 归一化方向向量
+                                    dir_x = dx / point_dist
+                                    dir_y = dy / point_dist
+
+                                    # 根据是否反转向量决定方向
+                                    if reverse_vector:
+                                        dir_x = -dir_x
+                                        dir_y = -dir_y
+
+                                    # 应用大小和影响因子
+                                    new_vx = dir_x * influence * magnitude
+                                    new_vy = dir_y * influence * magnitude
                                 else:
-                                    # 如果是零向量，则创建一个默认向量
-                                    new_vx = influence * magnitude
+                                    # 如果是鼠标位置本身，创建一个默认向量
+                                    if reverse_vector:
+                                        new_vx = -influence * magnitude
+                                    else:
+                                        new_vx = influence * magnitude
                                     new_vy = 0
+                            elif vector_mode == 1:
+                                # 单一方向模式 - 所有向量使用相同方向
+                                # 默认向右，如果反转则向左
+                                if reverse_vector:
+                                    new_vx = -influence * magnitude
+                                else:
+                                    new_vx = influence * magnitude
+                                new_vy = 0
+                            else:
+                                # 顺时针旋转模式 - 向量围绕鼠标顺时针旋转
+                                # 计算从鼠标位置到目标点的向量
+                                dx = target_x - grid_x
+                                dy = target_y - grid_y
+
+                                # 计算距离
+                                point_dist = np.sqrt(dx**2 + dy**2)
+
+                                if point_dist > 0.001:  # 避免除以零
+                                    # 计算切向量（顺时针旋转90度）
+                                    if reverse_vector:
+                                        # 反转时逆时针旋转
+                                        dir_x = -dy / point_dist
+                                        dir_y = dx / point_dist
+                                    else:
+                                        # 默认顺时针旋转
+                                        dir_x = dy / point_dist
+                                        dir_y = -dx / point_dist
+
+                                    # 应用大小和影响因子
+                                    new_vx = dir_x * influence * magnitude
+                                    new_vy = dir_y * influence * magnitude
+                                else:
+                                    # 如果是鼠标位置本身，创建一个默认向量
+                                    if reverse_vector:
+                                        new_vx = 0
+                                        new_vy = -influence * magnitude
+                                    else:
+                                        new_vx = 0
+                                        new_vy = influence * magnitude
 
                             updates[(target_y, target_x)] = (new_vx, new_vy)
 

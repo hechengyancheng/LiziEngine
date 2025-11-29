@@ -67,7 +67,8 @@ class AppController:
                 "help": self._cmd_help,
                 "perf reset": self._cmd_performance_reset,
                 "memory reset": self._cmd_memory_reset,
-                "optimize": self._cmd_optimize
+                "optimize": self._cmd_optimize,
+                "mode": self._cmd_toggle_vector_mode
             }
             self._toolbar = None
             self._running = False
@@ -124,6 +125,12 @@ class AppController:
 
         if hasattr(EventType, 'TOGGLE_REVERSE_VECTOR'):
             self._event_bus.subscribe(EventType.TOGGLE_REVERSE_VECTOR, FunctionEventHandler(self._on_toggle_reverse_vector))
+
+        if hasattr(EventType, 'TOGGLE_VECTOR_MODE'):
+            self._event_bus.subscribe(EventType.TOGGLE_VECTOR_MODE, FunctionEventHandler(self._on_toggle_vector_mode))
+            
+        if hasattr(EventType, 'SET_VECTOR_MODE'):
+            self._event_bus.subscribe(EventType.SET_VECTOR_MODE, FunctionEventHandler(self._on_set_vector_mode))
 
     def initialize(self, title: str = "LiziEngine", width: int = 800, height: int = 600) -> bool:
         """初始化应用程序"""
@@ -618,6 +625,7 @@ class AppController:
         print("  grid - 显示网格信息")
         print("  debug - 显示调试信息")
         print("  memory - 显示内存使用情况")
+        print("  mode [0|1|2] - 设置向量模式（0=辐射状, 1=单一方向, 2=顺时针旋转）")
         print("  help - 显示此帮助信息")
 
         print("高级命令:")
@@ -766,6 +774,40 @@ class AppController:
         """处理切换向量方向事件"""
         reverse = event.data.get("reverse", False)
         self._state_manager.set("reverse_vector", reverse)
+
+    def _on_toggle_vector_mode(self, event: Event) -> None:
+        """处理切换向量模式事件"""
+        radial_mode = event.data.get("radial_mode", True)
+        self._state_manager.set("vector_radial_mode", radial_mode)
+        
+    def _cmd_toggle_vector_mode(self, args):
+        """设置向量模式命令"""
+        mode_names = ["辐射状", "单一方向", "顺时针旋转"]
+        
+        # 如果没有参数，显示当前模式
+        if not args:
+            current_mode = self._state_manager.get("vector_mode", 0)
+            print(f"当前向量模式: {mode_names[current_mode]} (模式 {current_mode})")
+            print("可用模式: 0=辐射状, 1=单一方向, 2=顺时针旋转")
+            return
+            
+        # 尝试解析参数
+        try:
+            new_mode = int(args[0])
+            if 0 <= new_mode <= 2:
+                self._state_manager.set("vector_mode", new_mode)
+                print(f"向量模式已设置为: {mode_names[new_mode]} (模式 {new_mode})")
+            else:
+                print("错误: 模式值必须在0-2之间")
+                print("可用模式: 0=辐射状, 1=单一方向, 2=顺时针旋转")
+        except ValueError:
+            print("错误: 无效的模式值")
+            print("可用模式: 0=辐射状, 1=单一方向, 2=顺时针旋转")
+        
+    def _on_set_vector_mode(self, event: Event) -> None:
+        """处理设置向量模式事件"""
+        mode = event.data.get("mode", 0)  # 0=辐射状, 1=单一方向, 2=顺时针旋转
+        self._state_manager.set("vector_mode", mode)
 
     def cleanup(self) -> None:
         """清理应用程序资源"""

@@ -22,6 +22,8 @@ class EventType(Enum):
     VECTOR_UPDATED = "vector_updated"
     SET_MAGNITUDE = "set_magnitude"
     TOGGLE_REVERSE_VECTOR = "toggle_reverse_vector"
+    TOGGLE_VECTOR_MODE = "toggle_vector_mode"
+    SET_VECTOR_MODE = "set_vector_mode"
 
     # 视图相关事件
     VIEW_CHANGED = "view_changed"

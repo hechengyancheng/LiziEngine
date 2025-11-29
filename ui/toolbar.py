@@ -38,6 +38,7 @@ class Toolbar:
         self._magnitude = config_manager.get("vector_field.default_vector_length", 1.0)
         self._reverse_vector = config_manager.get("vector_field.reverse_vector", False)
         self._show_grid = config_manager.get("rendering.show_grid", True)
+        self._vector_mode = self._state_manager.get("vector_mode", 0)  # 0=辐射状, 1=单一方向, 2=顺时针旋转
 
         # UI状态
         self._show_toolbar = True
@@ -131,6 +132,35 @@ class Toolbar:
 
         # 更新状态
         self._state_manager.set("reverse_vector", self._reverse_vector)
+
+    def toggle_vector_mode(self) -> None:
+        """切换向量模式（辐射状/单一方向/顺时针旋转）"""
+        self._vector_mode = (self._vector_mode + 1) % 3
+        
+        # 更新状态
+        self._state_manager.set("vector_mode", self._vector_mode)
+        
+        # 发布事件
+        self._event_bus.publish(Event(
+            EventType.SET_VECTOR_MODE,
+            {"mode": self._vector_mode},
+            "Toolbar"
+        ))
+        
+    def set_vector_mode(self, mode: int) -> None:
+        """设置向量模式"""
+        if 0 <= mode <= 2:
+            self._vector_mode = mode
+            
+            # 更新状态
+            self._state_manager.set("vector_mode", self._vector_mode)
+            
+            # 发布事件
+            self._event_bus.publish(Event(
+                EventType.SET_VECTOR_MODE,
+                {"mode": self._vector_mode},
+                "Toolbar"
+            ))
 
     def save_grid(self, file_path: str) -> None:
         """保存网格"""
@@ -250,6 +280,12 @@ class ImGuiToolbar(Toolbar):
             changed, self._reverse_vector = self._imgui.checkbox("反转向量", self._reverse_vector)
             if changed:
                 self.toggle_reverse_vector()
+                
+            # 向量模式下拉菜单
+            mode_names = ["辐射状模式", "单一方向模式", "顺时针旋转模式"]
+            changed, current_mode = self._imgui.combo("向量模式", self._vector_mode, mode_names)
+            if changed:
+                self.set_vector_mode(current_mode)
 
         # 文件操作
         if self._imgui.collapsing_header("文件操作"):
