@@ -33,7 +33,7 @@ class OpenCLComputeManager:
         self_weight = config_manager.get("vector_self_weight", 1.0)
         neighbor_weight = config_manager.get("vector_neighbor_weight", 0.1)
         enable_average = config_manager.get("enable_vector_average", False)
-        enable_normalization = config_manager.get("enable_vector_normalization", True)
+        enable_normalization = config_manager.get("enable_vector_normalization", False)
 
         kernel_src = """
 __kernel void vector_field_compute(
@@ -225,7 +225,7 @@ __kernel void vector_field_compute(
             self_weight = config_manager.get("vector_self_weight", 1.0)
             neighbor_weight = config_manager.get("vector_neighbor_weight", 0.1)
             enable_average = config_manager.get("enable_vector_average", False)
-            enable_normalization = config_manager.get("enable_vector_normalization", True)
+            enable_normalization = config_manager.get("enable_vector_normalization", False)
 
             # 设置内核参数并执行
             self._kernel.set_args(

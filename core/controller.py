@@ -693,7 +693,9 @@ class AppController:
 
     def _on_grid_cleared(self, event: Event) -> None:
         """处理网格清空事件"""
-        self._app_core.grid_manager.clear_grid()
+        # 网格已被清空，无需再次清空
+        # 仅更新状态，确保UI同步
+        self._state_manager.set("grid_updated", True, notify=False)
 
     def _on_grid_saved(self, event: Event) -> None:
         """处理网格保存事件"""
@@ -814,13 +816,33 @@ class AppController:
             
     def _on_clear_grid(self, event: Event) -> None:
         """处理清空网格事件"""
+        # 防止递归
+        if hasattr(event, '_processed'):
+            return
+        event._processed = True
+
         print(f"[控制器] 收到CLEAR_GRID事件")
         try:
             print(f"[控制器] 准备清空网格")
-            self._app_core.grid_manager.clear_grid()
+            # 直接操作网格，不触发事件
+            with self._app_core.grid_manager._lock:
+                if self._app_core.grid_manager._grid is not None:
+                    self._app_core.grid_manager._grid.fill(0.0)
+                    # 更新状态，不触发事件
+                    self._state_manager.set("grid_updated", True, notify=False)
+
+                    # 如果使用OpenCL计算，同步更新GPU缓冲区
+                    if _config.get("use_opencl_compute", False):
+                        try:
+                            # 获取当前OpenCL上下文
+                            if hasattr(self, "_opencl_ctx") and self._opencl_ctx is not None:
+                                # 将清空后的网格数据上传到GPU
+                                self._opencl_compute_manager.upload_grid(self._opencl_ctx, self._app_core.grid_manager._grid)
+                                print(f"[控制器] OpenCL缓冲区已更新")
+                        except Exception as e:
+                            print(f"[控制器] 更新OpenCL缓冲区失败: {e}")
+
             print(f"[控制器] 网格已清空")
-            # 更新状态，禁用通知避免事件冲突
-            self._state_manager.set("grid_updated", True, notify=False)
         except Exception as e:
             print(f"[控制器] 清空网格时出错: {e}")
         

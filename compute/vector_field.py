@@ -78,7 +78,7 @@ class VectorFieldCalculator:
         neighbor_weight = config_manager.get("vector_neighbor_weight", 0.1)
         self_weight = config_manager.get("vector_self_weight", 1.0)
         enable_average = config_manager.get("enable_vector_average", False)
-        enable_normalization = config_manager.get("enable_vector_normalization", True)
+        enable_normalization = config_manager.get("enable_vector_normalization", False)
 
         # 预分配结果数组以提高性能
         result = np.zeros_like(grid)
@@ -120,7 +120,7 @@ class VectorFieldCalculator:
                 neighbor_count += 1
 
             # 归一化
-            result = result / neighbor_count[:, :, np.newaxis]
+            #result = result / neighbor_count[:, :, np.newaxis]
 
         # 如果需要权重归一化
         elif enable_normalization:
@@ -142,59 +142,6 @@ class VectorFieldCalculator:
 
             # 归一化
             result = result / weight_sum[:, :, np.newaxis]
-
-        # 计算有效邻居数（每个点最多有4个邻居）
-        neighbor_count = np.full((h, w), 4, dtype=np.float32)  # 初始化为4（上下左右）
-        
-        # 处理边界情况，减少边界点的邻居数
-        # 上边界
-        neighbor_count[0, :] -= 1
-        # 下边界
-        neighbor_count[h-1, :] -= 1
-        # 左边界
-        neighbor_count[:, 0] -= 1
-        # 右边界
-        neighbor_count[:, w-1] -= 1
-        
-        # 如果包含自身，邻居数加1
-        if include_self:
-            neighbor_count += 1
-
-        # 避免除以0
-        neighbor_count = np.maximum(neighbor_count, 1.0)
-
-        # 根据配置选项决定是否应用归一化
-        # 使用权重归一化而不是简单计数归一化，以保持向量场的稳定性
-        if enable_normalization:
-            # 计算每个点的有效权重总和，与OpenCL实现保持一致
-            weight_sum = np.zeros((h, w), dtype=np.float32)
-            
-            # 初始化为邻居权重总和
-            # 首先计算每个点实际有多少个邻居
-            actual_neighbors = np.ones((h, w), dtype=np.float32) * 4  # 假设每个点都有4个邻居
-            
-            # 处理边界情况，减少边界点的邻居数
-            # 上边界
-            actual_neighbors[0, :] -= 1
-            # 下边界
-            actual_neighbors[h-1, :] -= 1
-            # 左边界
-            actual_neighbors[:, 0] -= 1
-            # 右边界
-            actual_neighbors[:, w-1] -= 1
-            
-            # 计算邻居权重总和
-            weight_sum = actual_neighbors * neighbor_weight
-            
-            # 如果包含自身，添加自身权重
-            if include_self:
-                weight_sum += self_weight
-            
-            # 确保权重总和大于0，避免除以0
-            weight_sum = np.maximum(weight_sum, 0.1)  # 设置一个最小值，防止除以0
-            
-            # 使用权重总和进行归一化
-            result /= weight_sum[:, :, np.newaxis]
 
         # 将结果复制回原网格
         grid[:] = result
