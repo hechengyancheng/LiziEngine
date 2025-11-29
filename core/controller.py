@@ -42,7 +42,7 @@ class AppController:
             self._performance_monitor = performance_monitor
 
             # 性能监控开关
-            self._enable_performance_monitoring = _config.get("enable_performance_monitoring", True)
+            self._enable_performance_monitoring = _config.get("ui.enable_debug_output", True)
 
             # 调试工具
             self._debug_tools = debug_tools
@@ -131,33 +131,39 @@ class AppController:
             # 设置应用核心引用
             self._window_manager._app_core = self._app_core
 
+            # 从配置文件获取窗口设置
+            window_width = _config.get("window.width", width)
+            window_height = _config.get("window.height", height)
+            window_title = _config.get("window.title", title)
+
             # 创建窗口
-            window = self._window_manager.create_window(title, width, height)
+            window = self._window_manager.create_window(window_title, window_width, window_height)
             if window is None:
                 return False
 
             # 创建工具栏
-            self._toolbar = create_toolbar("auto")
+            toolbar_type = _config.get("ui.toolbar_type", "auto")
+            self._toolbar = create_toolbar(toolbar_type)
             if self._toolbar is not None and hasattr(self._toolbar, "initialize"):
                 self._toolbar.initialize(window)
 
             # 初始化网格
-            grid_width = _config.get("default_grid_width", 640)
-            grid_height = _config.get("default_grid_height", 480)
+            grid_width = _config.get("grid.width", _config.get("vector_field.grid_size", 50))
+            grid_height = _config.get("grid.height", _config.get("vector_field.grid_size", 50))
             self._app_core.grid_manager.init_grid(grid_width, grid_height)
 
             # 重置视图
             self._app_core.view_manager.reset_view(grid_width, grid_height)
 
             # 启用OpenCL计算
-            if config_manager.get("use_opencl_compute", False):
+            if config_manager.get("compute.use_opencl_compute", False):
                 try:
                     self._opencl_compute_manager.init_compute(grid_width, grid_height)
                     print("[应用控制器] OpenCL计算初始化成功")
                 except Exception as e:
                     print(f"[应用控制器] OpenCL计算初始化失败: {e}")
                     # 禁用OpenCL计算，回退到CPU计算
-                    config_manager.set("use_opencl_compute", False)
+                    config_manager.set("compute.use_opencl_compute", False)
 
             print("[应用控制器] 初始化完成")
             return True
@@ -194,8 +200,8 @@ class AppController:
 
         # 计算策略：根据网格大小决定使用CPU还是OpenCL计算
         # 小网格使用CPU计算（避免数据传输开销），大网格使用OpenCL计算（发挥并行优势）
-        use_opencl = _config.get("use_opencl_compute", False)
-        opencl_threshold = _config.get("opencl_compute_threshold", 100000)  # 默认阈值：100000个网格点
+        use_opencl = _config.get("compute.use_opencl_compute", False)
+        opencl_threshold = _config.get("compute.opencl_compute_threshold", 10000)  # 默认阈值：10000个网格点
         use_opencl_computation = use_opencl and grid_size > opencl_threshold
 
         print(f"[应用控制器] 网格大小: {grid_width}x{grid_height}={grid_size} 点")
@@ -216,7 +222,7 @@ class AppController:
                 print("[应用控制器] 已回退到CPU计算")
 
         # 更新频率控制
-        update_frequency = _config.get("update_frequency", 30.0)
+        update_frequency = _config.get("rendering.update_frequency", 30.0)
         update_interval = 1.0 / update_frequency
 
         return {
@@ -379,7 +385,7 @@ class AppController:
             if current_time - compute_env["last_update_time"] >= compute_env["update_interval"]:
                 try:
                     # 执行OpenCL计算
-                    include_self = _config.get("include_self", False)
+                    include_self = _config.get("vector_field.include_self", True)
                     self._opencl_compute_manager.step(compute_env["opencl_ctx"], include_self)
 
                     # 获取计算结果
@@ -404,7 +410,7 @@ class AppController:
             if current_time - compute_env["last_update_time"] >= compute_env["update_interval"]:
                 try:
                     # 执行CPU计算 - 使用优化后的向量化版本
-                    include_self = _config.get("include_self", False)
+                    include_self = _config.get("vector_field.include_self", False)
                     self._app_core.vector_calculator.update_grid_with_adjacent_sum(
                         self._app_core.grid_manager._grid,
                         include_self=include_self
@@ -433,10 +439,11 @@ class AppController:
         vector_field_renderer.render_background()
 
         # 渲染网格
-        show_grid = self._state_manager.get("show_grid", True)
+        show_grid = _config.get("rendering.show_grid", True)
         #print(f"[控制器] 渲染网格，show_grid={show_grid}")
         if show_grid:
-            vector_field_renderer.render_grid(grid, 1.0, cam_x, cam_y, cam_zoom, width, height)
+            cell_size = _config.get("rendering.cell_size", 1.0)
+            vector_field_renderer.render_grid(grid, cell_size, cam_x, cam_y, cam_zoom, width, height)
 
         # 渲染向量场
         vector_field_renderer.render_vector_field(grid, 1.0, cam_x, cam_y, cam_zoom, width, height)
@@ -483,7 +490,7 @@ class AppController:
         updates = event.data.get("updates", {})
 
         # 如果使用OpenCL计算，同步更新GPU缓冲区
-        if _config.get("use_opencl_compute", False):
+        if _config.get("compute.use_opencl_compute", False):
             try:
                 # 获取当前OpenCL上下文
                 if hasattr(self, "_opencl_ctx") and self._opencl_ctx is not None:
@@ -672,7 +679,7 @@ class AppController:
             else:
                 grid_size = 0
 
-            use_opencl = _config.get("use_opencl_compute", False)
+            use_opencl = _config.get("compute.use_opencl_compute", False)
 
         self._debug_tools.suggest_optimizations(grid_size, use_opencl)
 
@@ -693,7 +700,10 @@ class AppController:
             # 直接更新config_manager的内部状态，避免触发事件
             try:
                 with config_manager._lock:
-                    config_manager._settings["show_grid"] = show
+                    # 使用嵌套配置结构更新show_grid
+                    if "rendering" not in config_manager._settings:
+                        config_manager._settings["rendering"] = {}
+                    config_manager._settings["rendering"]["show_grid"] = show
                 print(f"[控制器] config_manager内部状态更新完成")
             except Exception as e:
                 print(f"[控制器] 更新config_manager内部状态时出错: {e}")
@@ -728,7 +738,7 @@ class AppController:
                     self._state_manager.set("grid_updated", True, notify=False)
 
                     # 如果使用OpenCL计算，同步更新GPU缓冲区
-                    if _config.get("use_opencl_compute", False):
+                    if _config.get("compute.use_opencl_compute", False):
                         try:
                             # 获取当前OpenCL上下文
                             if hasattr(self, "_opencl_ctx") and self._opencl_ctx is not None:
@@ -771,7 +781,7 @@ class AppController:
                 self._toolbar = None
 
             # 清理OpenCL计算资源
-            if _config.get("use_opencl_compute", False):
+            if _config.get("compute.use_opencl_compute", False):
                 self._opencl_compute_manager.cleanup()
 
             # 清理渲染器

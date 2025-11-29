@@ -18,13 +18,13 @@ class VectorFieldCalculator:
         返回 (sum_x, sum_y) 的 tuple。
         """
         # 从配置管理器读取权重参数和平均值开关
-        self_weight = config_manager.get("vector_self_weight", 1.0)
-        neighbor_weight = config_manager.get("vector_neighbor_weight", 0.1)
-        enable_average = config_manager.get("enable_vector_average", False)
+        self_weight = config_manager.get("vector_field.vector_self_weight", 1.0)
+        neighbor_weight = config_manager.get("vector_field.vector_neighbor_weight", 0.1)
+        enable_average = config_manager.get("vector_field.enable_vector_average", False)
 
         # 如果未指定include_self，则使用配置管理器中的默认值
         if include_self is None:
-            include_self = config_manager.get("include_self", False)
+            include_self = config_manager.get("vector_field.include_self", True)
 
         if grid is None:
             return (0.0, 0.0)
@@ -67,7 +67,7 @@ class VectorFieldCalculator:
         """
         # 如果未指定include_self，则使用配置管理器中的默认值
         if include_self is None:
-            include_self = config_manager.get("include_self", False)
+            include_self = config_manager.get("vector_field.include_self", True)
 
         if grid is None or not isinstance(grid, np.ndarray):
             return grid
@@ -75,10 +75,10 @@ class VectorFieldCalculator:
         h, w = grid.shape[:2]
 
         # 获取邻居权重
-        neighbor_weight = config_manager.get("vector_neighbor_weight", 0.1)
-        self_weight = config_manager.get("vector_self_weight", 1.0)
-        enable_average = config_manager.get("enable_vector_average", False)
-        enable_normalization = config_manager.get("enable_vector_normalization", False)
+        neighbor_weight = config_manager.get("vector_field.vector_neighbor_weight", 0.1)
+        self_weight = config_manager.get("vector_field.vector_self_weight", 1.0)
+        enable_average = config_manager.get("vector_field.enable_vector_average", False)
+        enable_normalization = config_manager.get("vector_field.enable_vector_normalization", False)
 
         # 预分配结果数组以提高性能
         result = np.zeros_like(grid)

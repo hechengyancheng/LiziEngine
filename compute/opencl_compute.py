@@ -30,10 +30,10 @@ class OpenCLComputeManager:
 
     def get_compute_kernel_src(self) -> str:
         """从配置管理器获取OpenCL计算内核源代码，动态设置权重参数"""
-        self_weight = config_manager.get("vector_self_weight", 1.0)
-        neighbor_weight = config_manager.get("vector_neighbor_weight", 0.1)
-        enable_average = config_manager.get("enable_vector_average", False)
-        enable_normalization = config_manager.get("enable_vector_normalization", False)
+        self_weight = config_manager.get("vector_field.vector_self_weight", 1.0)
+        neighbor_weight = config_manager.get("vector_field.vector_neighbor_weight", 0.1)
+        enable_average = config_manager.get("vector_field.enable_vector_average", False)
+        enable_normalization = config_manager.get("vector_field.enable_vector_normalization", False)
 
         kernel_src = """
 __kernel void vector_field_compute(
@@ -205,7 +205,7 @@ __kernel void vector_field_compute(
             ))
             raise
 
-    def step(self, ctx: Dict[str, Any], include_self: bool = False) -> Dict[str, Any]:
+    def step(self, ctx: Dict[str, Any], include_self: Optional[bool] = None) -> Dict[str, Any]:
         """
         在 GPU 上执行一次邻域求和（OpenCL内核），并在 ctx 中 ping-pong 交换输入/输出缓冲区。
         """
@@ -222,10 +222,16 @@ __kernel void vector_field_compute(
             output_buffer = ctx["output_buffer"] if ctx["ping"] else ctx["input_buffer"]
 
             # 从配置获取参数
-            self_weight = config_manager.get("vector_self_weight", 1.0)
-            neighbor_weight = config_manager.get("vector_neighbor_weight", 0.1)
-            enable_average = config_manager.get("enable_vector_average", False)
-            enable_normalization = config_manager.get("enable_vector_normalization", False)
+            self_weight = config_manager.get("vector_field.vector_self_weight", 1.0)
+            neighbor_weight = config_manager.get("vector_field.vector_neighbor_weight", 0.1)
+            enable_average = config_manager.get("vector_field.enable_vector_average", False)
+            enable_normalization = config_manager.get("vector_field.enable_vector_normalization", False)
+            
+            # 如果没有显式传入include_self参数，则从配置中读取
+            if include_self is None:
+                include_self = config_manager.get("vector_field.include_self", True)
+                
+            #print(f"[OpenCL计算] 计算参数 - include_self: {include_self}, self_weight: {self_weight}, neighbor_weight: {neighbor_weight}, enable_average: {enable_average}, enable_normalization: {enable_normalization}")
 
             # 设置内核参数并执行
             self._kernel.set_args(
@@ -392,7 +398,7 @@ def init_compute(width: int = 640, height: int = 480, init_grid: Optional[np.nda
     """便捷函数：初始化OpenCL计算"""
     return opencl_compute_manager.init_compute(width, height, init_grid)
 
-def opencl_step(ctx: Dict[str, Any], include_self: bool = False) -> Dict[str, Any]:
+def opencl_step(ctx: Dict[str, Any], include_self: Optional[bool] = None) -> Dict[str, Any]:
     """便捷函数：执行OpenCL计算步骤"""
     return opencl_compute_manager.step(ctx, include_self)
 

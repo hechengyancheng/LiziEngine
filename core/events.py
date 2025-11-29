@@ -95,7 +95,19 @@ class EventBus:
             except ImportError:
                 # 如果导入失败，返回默认值
                 return default
-        return self._config.get(key, default)
+
+        # 支持嵌套配置键
+        if '.' in key:
+            keys = key.split('.')
+            value = self._config._settings
+            try:
+                for k in keys:
+                    value = value[k]
+                return value
+            except (KeyError, TypeError):
+                return default
+        else:
+            return self._config.get(key, default)
 
     def subscribe(self, event_type: EventType, handler: EventHandler) -> None:
         """订阅事件"""
@@ -104,7 +116,7 @@ class EventBus:
                 self._handlers[event_type] = []
             if handler not in self._handlers[event_type]:
                 self._handlers[event_type].append(handler)
-                if self._get_config_value("enable_event_output", True):
+                if self._get_config_value("ui.enable_event_output", True):
                     print(f"[事件系统] 订阅事件: {event_type}, 处理器: {handler.__class__.__name__}")
 
     def unsubscribe(self, event_type: EventType, handler: EventHandler) -> None:
@@ -112,7 +124,7 @@ class EventBus:
         with self._lock:
             if event_type in self._handlers and handler in self._handlers[event_type]:
                 self._handlers[event_type].remove(handler)
-                if self._get_config_value("enable_event_output", True):
+                if self._get_config_value("ui.enable_event_output", True):
                     print(f"[事件系统] 取消订阅事件: {event_type}, 处理器: {handler.__class__.__name__}")
 
     def publish(self, event: Event) -> None:
@@ -122,17 +134,17 @@ class EventBus:
             self._recursion_depth = 0
             
         # 可配置的递归深度限制
-        max_recursion_depth = self._get_config_value("max_event_recursion_depth", 10)
+        max_recursion_depth = self._get_config_value("ui.max_event_recursion_depth", 10)
 
         if self._recursion_depth > max_recursion_depth:
-            if self._get_config_value("enable_event_output", True):
+            if self._get_config_value("ui.enable_event_output", True):
                 print(f"[事件系统] 警告: 事件递归深度超过限制 ({max_recursion_depth})，停止处理事件: {event.type}")
             return
             
         with self._lock:
             handlers = self._handlers.get(event.type, [])
 
-        if self._get_config_value("enable_event_output", True):
+        if self._get_config_value("ui.enable_event_output", True):
             print(f"[事件系统] 发布事件: {event.type}, 处理器数量: {len(handlers)}")
         
         # 增加递归深度
@@ -143,7 +155,7 @@ class EventBus:
                 try:
                     handler.handle(event)
                 except Exception as e:
-                    if self._get_config_value("enable_event_output", True):
+                    if self._get_config_value("ui.enable_event_output", True):
                         print(f"[事件系统] 处理事件时出错: {e}")
                     # 触发错误处理事件
                     self._publish_error_event(event, e)
@@ -175,7 +187,7 @@ class EventBus:
         """清除所有事件处理器"""
         with self._lock:
             self._handlers.clear()
-            if self._get_config_value("enable_event_output", True):
+            if self._get_config_value("ui.enable_event_output", True):
                 print("[事件系统] 已清除所有事件处理器")
 
 # 全局事件总线实例

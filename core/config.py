@@ -39,47 +39,61 @@ class ConfigManager:
         """加载默认配置"""
         self._settings = {
             # 窗口设置
-            "window_title": "LiziEngine",
-            "window_width": 800,
-            "window_height": 600,
-
-            # 网格设置
-            "default_grid_width": 640,
-            "default_grid_height": 480,
-            "show_grid": True,
-            "cell_size": 1,
-
-            # 视图设置
-            "cam_x": 0,
-            "cam_y": 0,
-            "cam_zoom": 1.0,
+            "window": {
+                "width": 1200,
+                "height": 800,
+                "title": "LiziEngine"
+            },
 
             # 向量场设置
-            "default_brush_size": 1,
-            "default_magnitude": 1.0,
-            "vector_self_weight": 1.0,
-            "vector_neighbor_weight": 0.1,
-            "include_self": False,
-            "enable_vector_average": False,
-            "reverse_vector": False,
-
-            # GPU计算设置
-            "use_opencl_compute": True,
-            "opencl_compute_threshold": 10000,  # 网格点数阈值，超过此值使用GPU计算
-            "compute_shader_local_size_x": 16,
-            "compute_shader_local_size_y": 16,
-            "update_frequency": 30.0,
+            "vector_field": {
+                "grid_size": 50,
+                "default_vector_length": 0.5,
+                "vector_color": [0.2, 0.6, 1.0, 1.0],
+                "default_brush_size": 10,
+                "vector_self_weight": 0.2,
+                "vector_neighbor_weight": 0.2,
+                "include_self": True,
+                "enable_vector_average": True,
+                "reverse_vector": False,
+                "enable_vector_normalization": False,
+                "enable_vector_smoothing": False,
+                "vector_smooth_factor": 0.8
+            },
 
             # 渲染设置
-            "vector_color": [0.2, 0.6, 1.0],
-            "grid_color": [0.3, 0.3, 0.3],
-            "background_color": [0.1, 0.1, 0.1],
+            "rendering": {
+                "background_color": [0.1, 0.1, 0.1, 1.0],
+                "grid_color": [0.3, 0.3, 0.3, 1.0],
+                "show_grid": True,
+                "cell_size": 1,
+                "cam_x": 0,
+                "cam_y": 0,
+                "cam_zoom": 1.0,
+                "update_frequency": 30.0
+            },
 
-            # 其他设置
-            "enable_vector_smoothing": True,
-            "vector_smooth_factor": 0.8,
-            "enable_debug_output": False,
-            "enable_event_output": True,
+            # 计算设置
+            "compute": {
+                "use_opencl_compute": True,
+                "opencl_compute_threshold": 10000,
+                "compute_shader_local_size_x": 32,
+                "compute_shader_local_size_y": 32
+            },
+
+            # UI设置
+            "ui": {
+                "toolbar_type": "auto",
+                "enable_debug_output": False,
+                "enable_event_output": False
+            },
+
+            # 网格设置
+            "grid": {
+                "width": 50,
+                "height": 50,
+                "cell_size": 10
+            }
         }
 
     def load_config(self, config_file: Optional[str] = None) -> None:
@@ -96,6 +110,11 @@ class ConfigManager:
                 if file_path.endswith('.json'):
                     # JSON格式配置文件
                     file_settings = json.load(f)
+
+                    # 检查是否是旧的扁平格式配置文件
+                    if not any(isinstance(v, dict) for v in file_settings.values()):
+                        print("[配置管理] 检测到旧的扁平配置格式，正在转换...")
+                        file_settings = self._convert_flat_to_nested(file_settings)
                 else:
                     # 旧的键值对格式配置文件
                     file_settings = {}
@@ -112,6 +131,9 @@ class ConfigManager:
                             value = value.strip()
                             file_settings[key] = self._parse_value(value)
 
+                    # 转换为嵌套格式
+                    file_settings = self._convert_flat_to_nested(file_settings)
+
             # 更新设置
             with self._lock:
                 self._settings.update(file_settings)
@@ -126,7 +148,7 @@ class ConfigManager:
                 "ConfigManager"
             ))
 
-            print(f"[配置管理] 配置加载完成，共加载 {len(file_settings)} 项设置")
+            print(f"[配置管理] 配置加载完成")
 
         except Exception as e:
             print(f"[配置管理] 加载配置文件出错: {e}")
@@ -170,15 +192,43 @@ class ConfigManager:
         return value
 
     def get(self, key: str, default: Any = None) -> Any:
-        """获取配置值，如果不存在则返回默认值"""
+        """获取配置值，如果不存在则返回默认值
+
+        支持嵌套键访问，例如 "window.width" 或 "vector_field.grid_size"
+        """
         with self._lock:
-            return self._settings.get(key, default)
+            # 如果key包含点号，则按嵌套路径查找
+            if '.' in key:
+                keys = key.split('.')
+                value = self._settings
+                try:
+                    for k in keys:
+                        value = value[k]
+                    return value
+                except (KeyError, TypeError):
+                    return default
+            else:
+                return self._settings.get(key, default)
 
     def set(self, key: str, value: Any, persist: bool = False) -> None:
-        """设置配置值"""
+        """设置配置值
+
+        支持嵌套键设置，例如 "window.width" 或 "vector_field.grid_size"
+        """
         with self._lock:
-            old_value = self._settings.get(key)
-            self._settings[key] = value
+            old_value = self.get(key)
+
+            # 如果key包含点号，则按嵌套路径设置
+            if '.' in key:
+                keys = key.split('.')
+                target = self._settings
+                for k in keys[:-1]:
+                    if k not in target:
+                        target[k] = {}
+                    target = target[k]
+                target[keys[-1]] = value
+            else:
+                self._settings[key] = value
 
             # 同步到状态管理器
             self._state_manager.set(f"config_{key}", value)
@@ -273,14 +323,118 @@ class ConfigManager:
         """将配置同步到状态管理器"""
         # 直接设置状态值，避免触发事件和递归
         with self._state_manager._lock:
-            for key, value in self._settings.items():
-                self._state_manager._state[f"config_{key}"] = value
+            self._sync_nested_to_state(self._settings, "config")
+
+    def _sync_nested_to_state(self, obj, prefix) -> None:
+        """递归同步嵌套配置到状态管理器"""
+        if isinstance(obj, dict):
+            for key, value in obj.items():
+                new_prefix = f"{prefix}_{key}"
+                if isinstance(value, dict):
+                    self._sync_nested_to_state(value, new_prefix)
+                else:
+                    self._state_manager._state[new_prefix] = value
+        else:
+            self._state_manager._state[prefix] = obj
+
+    def _convert_flat_to_nested(self, flat_config) -> dict:
+        """将扁平配置转换为嵌套配置"""
+        nested_config = {
+            "window": {},
+            "vector_field": {},
+            "rendering": {},
+            "compute": {},
+            "ui": {}
+        }
+
+        # 映射旧的扁平键到新的嵌套键
+        key_mapping = {
+            # 窗口设置
+            "window_title": ("window", "title"),
+            "window_width": ("window", "width"),
+            "window_height": ("window", "height"),
+
+            # 向量场设置
+            "default_brush_size": ("vector_field", "default_brush_size"),
+            "default_magnitude": ("vector_field", "default_vector_length"),
+            "vector_self_weight": ("vector_field", "vector_self_weight"),
+            "vector_neighbor_weight": ("vector_field", "vector_neighbor_weight"),
+            "include_self": ("vector_field", "include_self"),
+            "enable_vector_average": ("vector_field", "enable_vector_average"),
+            "reverse_vector": ("vector_field", "reverse_vector"),
+            "enable_vector_normalization": ("vector_field", "enable_vector_normalization"),
+            "enable_vector_smoothing": ("vector_field", "enable_vector_smoothing"),
+            "vector_smooth_factor": ("vector_field", "vector_smooth_factor"),
+            "vector_color": ("vector_field", "vector_color"),
+
+            # 渲染设置
+            "background_color": ("rendering", "background_color"),
+            "grid_color": ("rendering", "grid_color"),
+            "show_grid": ("rendering", "show_grid"),
+            "cell_size": ("rendering", "cell_size"),
+            "cam_x": ("rendering", "cam_x"),
+            "cam_y": ("rendering", "cam_y"),
+            "cam_zoom": ("rendering", "cam_zoom"),
+            "update_frequency": ("rendering", "update_frequency"),
+
+            # 计算设置
+            "use_opencl_compute": ("compute", "use_opencl_compute"),
+            "opencl_compute_threshold": ("compute", "opencl_compute_threshold"),
+            "compute_shader_local_size_x": ("compute", "compute_shader_local_size_x"),
+            "compute_shader_local_size_y": ("compute", "compute_shader_local_size_y"),
+
+            # UI设置
+            "enable_debug_output": ("ui", "enable_debug_output"),
+            "enable_event_output": ("ui", "enable_event_output")
+        }
+
+        # 转换配置
+        for old_key, value in flat_config.items():
+            if old_key in key_mapping:
+                section, new_key = key_mapping[old_key]
+                nested_config[section][new_key] = value
+            else:
+                # 对于没有映射的键，尝试根据前缀进行分类
+                if old_key.startswith("window"):
+                    nested_config["window"][old_key[6:]] = value
+                elif old_key.startswith("vector") or old_key.startswith("default"):
+                    nested_config["vector_field"][old_key] = value
+                elif old_key.startswith("render") or old_key.startswith("cam") or old_key.startswith("grid") or old_key.startswith("background"):
+                    nested_config["rendering"][old_key] = value
+                elif old_key.startswith("compute") or old_key.startswith("opencl"):
+                    nested_config["compute"][old_key] = value
+                elif old_key.startswith("debug") or old_key.startswith("event"):
+                    nested_config["ui"][old_key] = value
+                else:
+                    # 默认情况下，添加到UI部分
+                    nested_config["ui"][old_key] = value
+
+        # 添加默认值，确保所有必要的键都存在
+        for section, defaults in self._settings.items():
+            if isinstance(defaults, dict):
+                for key, default_value in defaults.items():
+                    if key not in nested_config[section]:
+                        nested_config[section][key] = default_value
+
+        return nested_config
 
     def debug_print_all(self) -> None:
         """打印所有已加载的配置项，用于调试"""
         print("[配置管理] 所有配置项:")
-        for key, value in sorted(self._settings.items()):
-            print(f"  {key} = {value}")
+        self._debug_print_nested(self._settings, 0)
+
+    def _debug_print_nested(self, obj, indent=0) -> None:
+        """递归打印嵌套配置"""
+        indent_str = "  " * indent
+        if isinstance(obj, dict):
+            for key, value in sorted(obj.items()):
+                if isinstance(value, dict):
+                    print(f"{indent_str}{key}:")
+                    self._debug_print_nested(value, indent + 1)
+                else:
+                    print(f"{indent_str}{key} = {value}")
+        else:
+            print(f"{indent_str}{obj}")
 
 # 确保类级别的锁已初始化
 if not hasattr(ConfigManager, '_lock') or ConfigManager._lock is None:

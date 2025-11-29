@@ -34,10 +34,10 @@ class Toolbar:
         self._state_manager = state_manager
 
         # 工具栏状态
-        self._brush_size = config_manager.get("default_brush_size", 1)
-        self._magnitude = config_manager.get("default_magnitude", 1.0)
-        self._reverse_vector = config_manager.get("reverse_vector", False)
-        self._show_grid = config_manager.get("show_grid", True)
+        self._brush_size = config_manager.get("vector_field.default_brush_size", 1)
+        self._magnitude = config_manager.get("vector_field.default_vector_length", 1.0)
+        self._reverse_vector = config_manager.get("vector_field.reverse_vector", False)
+        self._show_grid = config_manager.get("rendering.show_grid", True)
 
         # UI状态
         self._show_toolbar = True
@@ -96,7 +96,7 @@ class Toolbar:
     def toggle_grid(self) -> None:
         """切换网格显示"""
         self._show_grid = not self._show_grid
-        config_manager.set("show_grid", self._show_grid)
+        config_manager.set("rendering.show_grid", self._show_grid)
 
         # 更新状态
         self._state_manager.set("show_grid", self._show_grid)
@@ -111,7 +111,7 @@ class Toolbar:
     def set_brush_size(self, size: int) -> None:
         """设置画笔大小"""
         self._brush_size = max(1, min(10, size))
-        config_manager.set("default_brush_size", self._brush_size)
+        config_manager.set("vector_field.default_brush_size", self._brush_size)
 
         # 更新状态
         self._state_manager.set("brush_size", self._brush_size)
@@ -119,7 +119,7 @@ class Toolbar:
     def set_magnitude(self, magnitude: float) -> None:
         """设置向量大小"""
         self._magnitude = max(0.1, min(5.0, magnitude))
-        config_manager.set("default_magnitude", self._magnitude)
+        config_manager.set("vector_field.default_vector_length", self._magnitude)
 
         # 更新状态
         self._state_manager.set("magnitude", self._magnitude)
@@ -127,7 +127,7 @@ class Toolbar:
     def toggle_reverse_vector(self) -> None:
         """切换向量方向"""
         self._reverse_vector = not self._reverse_vector
-        config_manager.set("reverse_vector", self._reverse_vector)
+        config_manager.set("vector_field.reverse_vector", self._reverse_vector)
 
         # 更新状态
         self._state_manager.set("reverse_vector", self._reverse_vector)

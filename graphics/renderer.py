@@ -155,7 +155,7 @@ void main() {
             return
 
         # 获取配置
-        vector_color = config_manager.get("vector_color", [0.2, 0.6, 1.0])
+        vector_color = config_manager.get("vector_field.vector_color", [0.2, 0.6, 1.0])
 
         # 准备顶点数据
         h, w = grid.shape[:2]
@@ -252,8 +252,8 @@ void main() {
             return
 
         # 获取配置
-        grid_color = config_manager.get("grid_color", [0.3, 0.3, 0.3])
-        show_grid = self._state_manager.get("show_grid", True)
+        grid_color = config_manager.get("rendering.grid_color", [0.3, 0.3, 0.3])
+        show_grid = config_manager.get("rendering.show_grid", True)
 
         if not show_grid:
             return
@@ -312,7 +312,7 @@ void main() {
     def render_background(self) -> None:
         """渲染背景"""
         # 获取配置
-        bg_color = config_manager.get("background_color", [0.1, 0.1, 0.1])
+        bg_color = config_manager.get("rendering.background_color", [0.1, 0.1, 0.1])
 
         # 设置清屏颜色
         glClearColor(bg_color[0], bg_color[1], bg_color[2], 1.0)

@@ -225,7 +225,7 @@ class WindowManager:
         world_y = cam_y - half_h + (ypos / height) * (2 * half_h)
 
         # 获取网格单元大小
-        cell_size = config_manager.get("cell_size", 1.0)
+        cell_size = config_manager.get("rendering.cell_size", 1.0)
 
         # 计算网格坐标
         grid_x = int(world_x / cell_size)
@@ -285,13 +285,13 @@ class WindowManager:
         grid = app_core.grid_manager.grid
         if grid is not None and button == 0 and action == 1:  # 左键按下
             # 获取当前向量大小
-            magnitude = config_manager.get("default_magnitude", 1.0)
+            magnitude = config_manager.get("vector_field.default_vector_length", 1.0)
 
             # 获取画笔大小
-            brush_size = config_manager.get("default_brush_size", 1)
+            brush_size = config_manager.get("vector_field.default_brush_size", 1)
 
             # 获取是否反转向量
-            reverse_vector = config_manager.get("reverse_vector", False)
+            reverse_vector = config_manager.get("vector_field.reverse_vector", False)
 
             # 应用画笔效果
             updates = {}

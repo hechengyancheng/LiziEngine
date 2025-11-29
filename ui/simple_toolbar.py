@@ -13,11 +13,12 @@ class SimpleToolbar(Toolbar):
     def __init__(self):
         super().__init__()
         self._show_help = False
-        # 初始化工具栏属性
-        self._brush_size = 1
-        self._magnitude = 1.0
-        self._show_grid = True
-        self._reverse_vector = False
+        # 初始化工具栏属性 - 从配置中获取初始值
+        from core.config import config_manager
+        self._brush_size = config_manager.get("vector_field.default_brush_size", 1)
+        self._magnitude = config_manager.get("vector_field.default_vector_length", 1.0)
+        self._show_grid = config_manager.get("rendering.show_grid", True)
+        self._reverse_vector = config_manager.get("vector_field.reverse_vector", False)
         
         # 使用全局事件总线实例
         from core.events import event_bus
