@@ -28,6 +28,11 @@ class GridManager:
         """获取网格数据的副本"""
         with self._lock:
             return self._grid.copy() if self._grid is not None else None
+            
+    def get_raw_grid(self) -> Optional[np.ndarray]:
+        """获取原始网格数据的引用（用于直接修改）"""
+        with self._lock:
+            return self._grid
 
     def init_grid(self, width: int = 640, height: int = 480, default: Tuple[float, float] = (0.0, 0.0)) -> np.ndarray:
         """初始化网格"""
@@ -57,16 +62,20 @@ class GridManager:
         """更新网格中的特定点"""
         with self._lock:
             if self._grid is None:
+                print("[网格管理] 错误: 网格未初始化")
                 return
 
+            print(f"[网格管理] 收到更新请求，更新点数: {len(updates)}")
             changed = False
             for (y, x), (vx, vy) in updates.items():
                 if 0 <= y < self._grid.shape[0] and 0 <= x < self._grid.shape[1]:
                     self._grid[y, x] = (vx, vy)
                     changed = True
+                else:
+                    print(f"[网格管理] 警告: 跳过超出范围的点 ({x}, {y})")
 
             if changed:
-                #print("[网格管理] 网格数据已更新")
+                print("[网格管理] 网格数据已更新")
                 # 更新状态
                 self._state_manager.set("grid_updated", True)
 

@@ -33,7 +33,7 @@
     "cam_x": 0,
     "cam_y": 0,
     "cam_zoom": 1.0,
-    "update_frequency": 30.0
+    "update_frequency": 60.0
   },
   "compute": {
     "use_opencl_compute": true,

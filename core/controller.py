@@ -10,9 +10,12 @@ from .events import EventBus, Event, EventType, EventHandler, FunctionEventHandl
 from .state import state_manager
 from .config import config_manager
 from .performance import performance_monitor, memory_monitor, debug_tools
+from .keycodes import KeyCodes
+from .error_handler import error_handler, LogLevel
+from .resource_manager import resource_manager
 
-# 使用全局配置管理器实例
-from core.config import config_manager as _config
+# 配置管理器统一引用
+from core.config import config_manager
 from graphics.window import window_manager
 from graphics.renderer import vector_field_renderer
 from compute.vector_field import vector_calculator
@@ -41,8 +44,14 @@ class AppController:
             # 性能监控器
             self._performance_monitor = performance_monitor
 
+            # 错误处理器
+            self._error_handler = error_handler
+
+            # 资源管理器
+            self._resource_manager = resource_manager
+
             # 性能监控开关
-            self._enable_performance_monitoring = _config.get("ui.enable_debug_output", True)
+            self._enable_performance_monitoring = config_manager.get("ui.enable_debug_output", True)
 
             # 调试工具
             self._debug_tools = debug_tools
@@ -139,24 +148,27 @@ class AppController:
             self._window_manager._app_core = self._app_core
 
             # 从配置文件获取窗口设置
-            window_width = _config.get("window.width", width)
-            window_height = _config.get("window.height", height)
-            window_title = _config.get("window.title", title)
+            window_width = config_manager.get("window.width", width)
+            window_height = config_manager.get("window.height", height)
+            window_title = config_manager.get("window.title", title)
 
             # 创建窗口
             window = self._window_manager.create_window(window_title, window_width, window_height)
             if window is None:
                 return False
 
+            # 注册窗口资源
+            self._resource_manager.register_resource("window", window, self._window_manager.cleanup)
+
             # 创建工具栏
-            toolbar_type = _config.get("ui.toolbar_type", "auto")
+            toolbar_type = config_manager.get("ui.toolbar_type", "auto")
             self._toolbar = create_toolbar(toolbar_type)
             if self._toolbar is not None and hasattr(self._toolbar, "initialize"):
                 self._toolbar.initialize(window)
 
             # 初始化网格
-            grid_width = _config.get("grid.width", _config.get("vector_field.grid_size", 50))
-            grid_height = _config.get("grid.height", _config.get("vector_field.grid_size", 50))
+            grid_width = config_manager.get("grid.width", config_manager.get("vector_field.grid_size", 50))
+            grid_height = config_manager.get("grid.height", config_manager.get("vector_field.grid_size", 50))
             self._app_core.grid_manager.init_grid(grid_width, grid_height)
 
             # 重置视图
@@ -168,12 +180,16 @@ class AppController:
                     self._opencl_compute_manager.init_compute(grid_width, grid_height)
                     print("[应用控制器] OpenCL计算初始化成功")
                 except Exception as e:
-                    print(f"[应用控制器] OpenCL计算初始化失败: {e}")
+                    self._error_handler.handle_exception(e, "OpenCL计算初始化")
                     # 禁用OpenCL计算，回退到CPU计算
                     config_manager.set("compute.use_opencl_compute", False)
 
             print("[应用控制器] 初始化完成")
             return True
+        except Exception as e:
+            # 处理初始化异常
+            self._error_handler.handle_exception(e, "应用初始化")
+            return False
         except Exception as e:
             print(f"[应用控制器] 初始化失败: {e}")
             return False
@@ -207,8 +223,8 @@ class AppController:
 
         # 计算策略：根据网格大小决定使用CPU还是OpenCL计算
         # 小网格使用CPU计算（避免数据传输开销），大网格使用OpenCL计算（发挥并行优势）
-        use_opencl = _config.get("compute.use_opencl_compute", False)
-        opencl_threshold = _config.get("compute.opencl_compute_threshold", 10000)  # 默认阈值：10000个网格点
+        use_opencl = config_manager.get("compute.use_opencl_compute", False)
+        opencl_threshold = config_manager.get("compute.opencl_compute_threshold", 10000)  # 默认阈值：10000个网格点
         use_opencl_computation = use_opencl and grid_size > opencl_threshold
 
         print(f"[应用控制器] 网格大小: {grid_width}x{grid_height}={grid_size} 点")
@@ -229,7 +245,7 @@ class AppController:
                 print("[应用控制器] 已回退到CPU计算")
 
         # 更新频率控制
-        update_frequency = _config.get("rendering.update_frequency", 30.0)
+        update_frequency = config_manager.get("rendering.update_frequency", 30.0)
         update_interval = 1.0 / update_frequency
 
         return {
@@ -312,23 +328,23 @@ class AppController:
         # 处理调试快捷键
         if hasattr(self._window_manager, 'get_key_pressed'):
             # /键 - 切换命令输入模式
-            self._handle_key_press(47, self._toggle_command_input_mode, [])  # GLFW_KEY_SLASH
+            self._handle_key_press(KeyCodes.KEY_SLASH, self._toggle_command_input_mode, [])
 
             # 如果处于命令输入模式，处理字符输入
             if self._command_input_mode:
                 self._process_command_input()
             else:
                 # F1 - 显示帮助
-                self._handle_key_press(290, self._cmd_help, [])  # GLFW_KEY_F1
+                self._handle_key_press(KeyCodes.KEY_F1, self._cmd_help, [])
 
                 # F2 - 显示性能报告
-                self._handle_key_press(291, self._cmd_performance, [])  # GLFW_KEY_F2
+                self._handle_key_press(KeyCodes.KEY_F2, self._cmd_performance, [])
 
                 # F3 - 显示网格信息
-                self._handle_key_press(292, self._cmd_grid_info, [])  # GLFW_KEY_F3
+                self._handle_key_press(KeyCodes.KEY_F3, self._cmd_grid_info, [])
 
                 # F4 - 显示调试信息
-                self._handle_key_press(293, self._cmd_debug_info, [])  # GLFW_KEY_F4
+                self._handle_key_press(KeyCodes.KEY_F4, self._cmd_debug_info, [])
 
                 # G键由事件系统处理，不再直接处理
 
@@ -358,29 +374,64 @@ class AppController:
 
     def _process_command_input(self):
         """处理命令输入"""
-        # 使用input()函数获取用户输入
+        # 使用GUI输入而非阻塞式控制台输入
         try:
             # 显示提示符
-            print("> ", end="", flush=True)
-            # 获取用户输入
-            self._command_input = input().strip()
+            print("[命令输入模式] 输入命令后按Enter执行，按Esc取消")
 
-            # 如果用户输入了命令，执行它
-            if self._command_input:
-                self._process_debug_command(self._command_input)
+            # 使用窗口管理器的字符输入回调处理命令
+            if hasattr(self._window_manager, 'set_char_callback'):
+                def char_callback(window, char_code):
+                    # 处理字符输入
+                    if char_code == 13:  # Enter键
+                        if self._command_input:
+                            self._process_debug_command(self._command_input)
+                        self._command_input = ""
+                        self._command_cursor = 0
+                        self._command_input_mode = False
+                        self._window_manager.set_char_callback(None)  # 移除回调
+                        print("[命令输入模式已禁用]")
+                    elif char_code == 27:  # Esc键
+                        self._command_input = ""
+                        self._command_cursor = 0
+                        self._command_input_mode = False
+                        self._window_manager.set_char_callback(None)  # 移除回调
+                        print("[命令输入模式已禁用]")
+                    elif char_code == 8:  # Backspace键
+                        if self._command_cursor > 0:
+                            self._command_input = self._command_input[:self._command_cursor-1] + self._command_input[self._command_cursor:]
+                            self._command_cursor -= 1
+                    else:
+                        # 添加字符到输入
+                        char = chr(char_code)
+                        self._command_input = self._command_input[:self._command_cursor] + char + self._command_input[self._command_cursor:]
+                        self._command_cursor += 1
 
-            # 退出命令输入模式
-            self._command_input_mode = False
-            print("[命令输入模式已禁用]")
+                    # 显示当前输入
+                    print(f"\r> {self._command_input}", end="", flush=True)
 
-        except KeyboardInterrupt:
-            # 用户按Ctrl+C中断输入
-            self._command_input_mode = False
-            print("\n[命令输入模式已禁用]")
+                # 设置字符输入回调
+                self._window_manager.set_char_callback(char_callback)
+            else:
+                # 如果窗口管理器不支持字符回调，回退到控制台输入
+                print("> ", end="", flush=True)
+                self._command_input = input().strip()
+
+                # 如果用户输入了命令，执行它
+                if self._command_input:
+                    self._process_debug_command(self._command_input)
+
+                # 退出命令输入模式
+                self._command_input_mode = False
+                print("[命令输入模式已禁用]")
+
         except Exception as e:
-            # 处理其他可能的错误
-            print(f"\n[命令输入错误] {e}")
+            # 处理错误
             self._command_input_mode = False
+            self._error_handler.handle_exception(e, "命令输入处理")
+        except Exception as e:
+            if hasattr(self._window_manager, 'set_char_callback'):
+                self._window_manager.set_char_callback(None)  # 确保移除回调
 
     def _update_grid(self, compute_env, current_time):
         """更新网格数据"""
@@ -392,7 +443,7 @@ class AppController:
             if current_time - compute_env["last_update_time"] >= compute_env["update_interval"]:
                 try:
                     # 执行OpenCL计算
-                    include_self = _config.get("vector_field.include_self", True)
+                    include_self = config_manager.get("vector_field.include_self", True)
                     self._opencl_compute_manager.step(compute_env["opencl_ctx"], include_self)
 
                     # 获取计算结果
@@ -405,7 +456,7 @@ class AppController:
                     self._state_manager.set("grid_updated", True)
                     compute_env["last_update_time"] = current_time
                 except Exception as e:
-                    print(f"[应用控制器] OpenCL计算出错: {e}")
+                    self._error_handler.handle_exception(e, "OpenCL计算")
                     # 回退到CPU计算
                     compute_env["use_opencl_computation"] = False
                     print("[应用控制器] 已回退到CPU计算")
@@ -417,7 +468,7 @@ class AppController:
             if current_time - compute_env["last_update_time"] >= compute_env["update_interval"]:
                 try:
                     # 执行CPU计算 - 使用优化后的向量化版本
-                    include_self = _config.get("vector_field.include_self", False)
+                    include_self = config_manager.get("vector_field.include_self", False)
                     self._app_core.vector_calculator.update_grid_with_adjacent_sum(
                         self._app_core.grid_manager._grid,
                         include_self=include_self
@@ -427,7 +478,7 @@ class AppController:
                     self._state_manager.set("grid_updated", True)
                     compute_env["last_update_time"] = current_time
                 except Exception as e:
-                    print(f"[应用控制器] CPU计算出错: {e}")
+                    self._error_handler.handle_exception(e, "CPU计算")
 
     def _render_scene(self):
         """渲染场景"""
@@ -446,21 +497,21 @@ class AppController:
         vector_field_renderer.render_background()
 
         # 渲染网格
-        show_grid = _config.get("rendering.show_grid", True)
+        show_grid = config_manager.get("rendering.show_grid", True)
         #print(f"[控制器] 渲染网格，show_grid={show_grid}")
         if show_grid:
-            cell_size = _config.get("rendering.cell_size", 1.0)
+            cell_size = config_manager.get("rendering.cell_size", 1.0)
             vector_field_renderer.render_grid(grid, cell_size, cam_x, cam_y, cam_zoom, width, height)
 
         # 渲染向量场
         vector_field_renderer.render_vector_field(grid, 1.0, cam_x, cam_y, cam_zoom, width, height)
         
         # 识别并渲染向量中心
-        show_centers = _config.get("vector_field.show_centers", True)
+        show_centers = config_manager.get("vector_field.show_centers", True)
         if show_centers and grid is not None:
             # 获取配置参数
-            threshold = _config.get("vector_field.center_threshold", 0.5)
-            min_distance = _config.get("vector_field.center_min_distance", 10)
+            threshold = config_manager.get("vector_field.center_threshold", 0.5)
+            min_distance = config_manager.get("vector_field.center_min_distance", 10)
             
             # 识别向量中心
             from compute.vector_field import correct_vector_centers
@@ -468,7 +519,7 @@ class AppController:
             
             # 渲染中心标记
             if centers:
-                cell_size = _config.get("rendering.cell_size", 1.0)
+                cell_size = config_manager.get("rendering.cell_size", 1.0)
                 vector_field_renderer.render_vector_centers(centers, cell_size, cam_x, cam_y, cam_zoom, width, height)
 
         # 渲染工具栏
@@ -513,7 +564,7 @@ class AppController:
         updates = event.data.get("updates", {})
 
         # 如果使用OpenCL计算，同步更新GPU缓冲区
-        if _config.get("compute.use_opencl_compute", False):
+        if config_manager.get("compute.use_opencl_compute", False):
             try:
                 # 获取当前OpenCL上下文
                 if hasattr(self, "_opencl_ctx") and self._opencl_ctx is not None:
@@ -527,6 +578,9 @@ class AppController:
         """处理网格更新请求事件（用于解耦window模块）"""
         # 从事件数据中获取更新信息
         updates = event.data.get("updates", {})
+        
+        # 添加调试信息
+        print(f"[应用控制器] 收到网格更新请求，更新点数: {len(updates)}")
 
         # 执行网格更新
         if updates:
@@ -703,7 +757,7 @@ class AppController:
             else:
                 grid_size = 0
 
-            use_opencl = _config.get("compute.use_opencl_compute", False)
+            use_opencl = config_manager.get("compute.use_opencl_compute", False)
 
         self._debug_tools.suggest_optimizations(grid_size, use_opencl)
 
@@ -765,7 +819,7 @@ class AppController:
                     self._state_manager.set("vector_field_centers", [])
 
                     # 如果使用OpenCL计算，同步更新GPU缓冲区
-                    if _config.get("compute.use_opencl_compute", False):
+                    if config_manager.get("compute.use_opencl_compute", False):
                         try:
                             # 获取当前OpenCL上下文
                             if hasattr(self, "_opencl_ctx") and self._opencl_ctx is not None:
@@ -842,7 +896,7 @@ class AppController:
                 self._toolbar = None
 
             # 清理OpenCL计算资源
-            if _config.get("compute.use_opencl_compute", False):
+            if config_manager.get("compute.use_opencl_compute", False):
                 self._opencl_compute_manager.cleanup()
 
             # 清理渲染器
@@ -856,7 +910,11 @@ class AppController:
 
             print("[应用控制器] 资源清理完成")
         except Exception as e:
-            print(f"[应用控制器] 清理资源时出错: {e}")
+            self._error_handler.handle_exception(e, "资源清理")
+            # 记录错误统计
+            error_stats = self._error_handler.get_error_statistics()
+            if error_stats:
+                self._error_handler.log(LogLevel.INFO, f"错误统计: {error_stats}")
 
     # update_ui_info方法已被删除，因为_update_ui_info已经实现了相同功能
 

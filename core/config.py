@@ -48,13 +48,13 @@ class ConfigManager:
             # 向量场设置
             "vector_field": {
                 "grid_size": 50,
-                "default_vector_length": 10.0,
+                "default_vector_length": 0.5,
                 "vector_color": [0.2, 0.6, 1.0, 1.0],
                 "default_brush_size": 10,
                 "vector_self_weight": 0.2,
                 "vector_neighbor_weight": 0.2,
                 "include_self": True,
-                "enable_vector_average": False,
+                "enable_vector_average": True,
                 "reverse_vector": False,
                 "enable_vector_normalization": False
             },
@@ -68,7 +68,7 @@ class ConfigManager:
                 "cam_x": 0,
                 "cam_y": 0,
                 "cam_zoom": 1.0,
-                "update_frequency": 60.0
+                "update_frequency": 30.0
             },
 
             # 计算设置
@@ -88,8 +88,8 @@ class ConfigManager:
 
             # 网格设置
             "grid": {
-                "width": 800,
-                "height": 600,
+                "width": 50,
+                "height": 50,
                 "cell_size": 10
             }
         }
