@@ -12,71 +12,125 @@ class VectorFieldCalculator:
     def __init__(self):
         self._event_bus = EventBus()
 
-    def sum_adjacent_vectors(self, grid: np.ndarray, x: int, y: int, include_self: bool = None) -> Tuple[float, float]:
+    def _get_adjacent_positions(self, x: int, y: int, h: int, w: int, include_self: bool = True) -> List[Tuple[int, int]]:
         """
-        读取目标 (x,y) 的上下左右四个相邻格子的向量并相加（越界安全）。
-        返回 (sum_x, sum_y) 的 tuple。
+        获取相邻位置的坐标列表，包括中心点自身（可选）
+
+        参数:
+            x: 目标点的x坐标(列索引)
+            y: 目标点的y坐标(行索引)
+            h: 网格高度
+            w: 网格宽度
+            include_self: 是否包含中心点自身
+
+        返回:
+            List[Tuple[int, int]]: 相邻位置的坐标列表 [(x, y), ...]
         """
-        if include_self is None:
-            include_self = config_manager.get("vector_field.include_self", True)
+        positions = []
 
-        h, w = grid.shape[:2]
-        sum_x = sum_y = 0.0
-
-        # 上
+        # 上方相邻位置
         if y > 0:
-            sum_x += float(grid[y-1, x, 0])
-            sum_y += float(grid[y-1, x, 1])
-        # 下
+            positions.append((x, y-1))
+
+        # 下方相邻位置
         if y < h - 1:
-            sum_x += float(grid[y+1, x, 0])
-            sum_y += float(grid[y+1, x, 1])
-        # 左
+            positions.append((x, y+1))
+
+        # 左侧相邻位置
         if x > 0:
-            sum_x += float(grid[y, x-1, 0])
-            sum_y += float(grid[y, x-1, 1])
-        # 右
+            positions.append((x-1, y))
+
+        # 右侧相邻位置
         if x < w - 1:
-            sum_x += float(grid[y, x+1, 0])
-            sum_y += float(grid[y, x+1, 1])
+            positions.append((x+1, y))
 
         # 中心点自身
         if include_self:
-            sum_x += float(grid[y, x, 0])
-            sum_y += float(grid[y, x, 1])
+            positions.append((x, y))
+
+        return positions
+
+    def sum_adjacent_vectors(self, grid: np.ndarray, x: int, y: int, include_self: bool = None) -> Tuple[float, float]:
+        """
+        计算目标点及其相邻点的向量和
+
+        该方法计算指定坐标(x, y)处的向量与其上下左右四个相邻向量的总和。
+        所有操作都是边界安全的，不会因为越界访问而产生错误。
+
+        参数:
+            grid: 二维向量场数组，形状为(height, width, 2)，最后一维表示向量的x和y分量
+            x: 目标点的x坐标(列索引)
+            y: 目标点的y坐标(行索引)
+            include_self: 是否包含目标点自身的向量，None表示从配置文件读取
+
+        返回:
+            Tuple[float, float]: 向量总和的(x, y)分量
+
+        示例:
+            >>> calculator = VectorFieldCalculator()
+            >>> grid = np.zeros((10, 10, 2))
+            >>> grid[5, 5] = [1.0, 0.0]  # 设置中心点向量
+            >>> grid[4, 5] = [0.0, 1.0]  # 设置上方向量
+            >>> sum_x, sum_y = calculator.sum_adjacent_vectors(grid, 5, 5, include_self=True)
+            >>> print(f"向量和: ({sum_x}, {sum_y})")  # 输出: 向量和: (1.0, 1.0)
+        """
+        # 从配置获取是否包含自身向量的设置，如果未指定则默认为True
+        if include_self is None:
+            include_self = config_manager.get("vector_field.include_self", True)
+
+        # 获取网格尺寸
+        h, w = grid.shape[:2]
+        sum_x = sum_y = 0.0
+
+        # 获取所有相邻位置
+        positions = self._get_adjacent_positions(x, y, h, w, include_self)
+
+        # 计算所有位置的向量和
+        for pos_x, pos_y in positions:
+            sum_x += float(grid[pos_y, pos_x, 0])
+            sum_y += float(grid[pos_y, pos_x, 1])
 
         return sum_x, sum_y
 
     def average_adjacent_vectors(self, grid: np.ndarray, x: int, y: int, include_self: bool = None) -> Tuple[float, float]:
         """
-        读取目标 (x,y) 的上下左右四个相邻格子的向量并求平均（越界安全）。
-        返回 (avg_x, avg_y) 的 tuple。
+        计算目标点及其相邻点的向量平均值
+
+        该方法计算指定坐标(x, y)处的向量与其上下左右四个相邻向量的平均值。
+        所有操作都是边界安全的，不会因为越界访问而产生错误。
+
+        参数:
+            grid: 二维向量场数组，形状为(height, width, 2)，最后一维表示向量的x和y分量
+            x: 目标点的x坐标(列索引)
+            y: 目标点的y坐标(行索引)
+            include_self: 是否包含目标点自身的向量，None表示从配置文件读取
+
+        返回:
+            Tuple[float, float]: 向量平均值的(x, y)分量
+
+        示例:
+            >>> calculator = VectorFieldCalculator()
+            >>> grid = np.zeros((10, 10, 2))
+            >>> grid[5, 5] = [2.0, 0.0]  # 设置中心点向量
+            >>> grid[4, 5] = [0.0, 2.0]  # 设置上方向量
+            >>> avg_x, avg_y = calculator.average_adjacent_vectors(grid, 5, 5, include_self=True)
+            >>> print(f"向量平均值: ({avg_x}, {avg_y}")  # 输出: 向量平均值: (1.0, 1.0)
         """
-        sum_x, sum_y = self.sum_adjacent_vectors(grid, x, y, include_self)
-
-        # 计算相邻格子数量
-        h, w = grid.shape[:2]
-        count = 0
-
-        # 上
-        if y > 0:
-            count += 1
-        # 下
-        if y < h - 1:
-            count += 1
-        # 左
-        if x > 0:
-            count += 1
-        # 右
-        if x < w - 1:
-            count += 1
-
-        # 中心点自身
+        # 从配置获取是否包含自身向量的设置，如果未指定则默认为True
         if include_self is None:
             include_self = config_manager.get("vector_field.include_self", True)
-        if include_self:
-            count += 1
 
+        # 使用sum_adjacent_vectors方法计算向量和
+        sum_x, sum_y = self.sum_adjacent_vectors(grid, x, y, include_self)
+
+        # 获取网格尺寸
+        h, w = grid.shape[:2]
+
+        # 获取所有相邻位置
+        positions = self._get_adjacent_positions(x, y, h, w, include_self)
+        count = len(positions)
+
+        # 计算平均值，避免除以零
         if count > 0:
             return sum_x / count, sum_y / count
         else:
@@ -174,6 +228,8 @@ class VectorFieldCalculator:
         """
         获取已记录的向量场中心点，并在每帧不断修正其位置
 
+        优化版本: 使用向量化操作减少嵌套循环，提高性能
+
         参数:
             grid: 向量网格
             threshold: 用于判断是否更新中心点的向量强度阈值
@@ -199,6 +255,8 @@ class VectorFieldCalculator:
 
         # 获取自动修正开关
         auto_correct = config_manager.get("vector_field.auto_correct_centers", True)
+        search_radius = config_manager.get("vector_field.center_search_radius", 10)
+        max_magnitude = config_manager.get("vector_field.center_max_magnitude", 5.0)
 
         for center in centers:
             if len(center) >= 2:  # 确保中心点有x,y坐标
@@ -208,50 +266,42 @@ class VectorFieldCalculator:
                 if 0 <= center_x < w and 0 <= center_y < h:
                     # 如果启用自动修正，则根据向量场调整中心点位置
                     if auto_correct:
-                        # 获取搜索范围（基于配置）
-                        search_radius = config_manager.get("vector_field.center_search_radius", 10)
-
                         # 确保搜索范围不超出网格边界
                         min_x = max(0, center_x - search_radius)
                         max_x = min(w - 1, center_x + search_radius)
                         min_y = max(0, center_y - search_radius)
                         max_y = min(h - 1, center_y + search_radius)
 
-                        # 使用加权平均方法计算新的中心点位置
-                        total_weight = 0.0
-                        weighted_x = 0.0
-                        weighted_y = 0.0
+                        # 提取搜索区域
+                        search_region = grid[min_y:max_y+1, min_x:max_x+1]
 
-                        # 设置最大向量强度阈值，防止过大值影响修正
-                        max_magnitude = 5.0
+                        # 计算向量幅度
+                        vec_x = search_region[:, :, 0]
+                        vec_y = search_region[:, :, 1]
+                        magnitudes = np.sqrt(vec_x**2 + vec_y**2)
 
-                        for y in range(min_y, max_y + 1):
-                            for x in range(min_x, max_x + 1):
-                                # 计算到原始中心的距离
-                                dist = np.sqrt((x - center_x)**2 + (y - center_y)**2)
+                        # 限制向量幅度
+                        magnitudes = np.minimum(magnitudes, max_magnitude)
 
-                                # 计算当前位置的向量
-                                vec_x = float(grid[y, x, 0])
-                                vec_y = float(grid[y, x, 1])
-                                magnitude = np.sqrt(vec_x**2 + vec_y**2)
+                        # 创建坐标网格
+                        y_indices, x_indices = np.mgrid[min_y:max_y+1, min_x:max_x+1]
 
-                                # 对向量强度进行限制，防止过大值影响修正
-                                magnitude = min(magnitude, max_magnitude)
+                        # 计算距离权重 - 使用向量化操作
+                        distances = np.sqrt((x_indices - center_x)**2 + (y_indices - center_y)**2)
+                        sigma = search_radius / 2
+                        distance_weights = np.exp(-(distances**2) / (2 * sigma**2))
 
-                                # 计算权重：向量强度越高，距离原始中心越近，权重越大
-                                # 使用高斯函数计算距离权重，使中心附近的点权重更大
-                                distance_weight = np.exp(-(dist**2) / (2 * (search_radius/2)**2))
-                                weight = magnitude * distance_weight
-
-                                # 累加权重和加权位置
-                                total_weight += weight
-                                weighted_x += x * weight
-                                weighted_y += y * weight
+                        # 计算总权重
+                        weights = magnitudes * distance_weights
+                        total_weight = np.sum(weights)
 
                         # 计算加权平均位置
                         if total_weight > 0:
-                            best_x = int(round(weighted_x / total_weight))
-                            best_y = int(round(weighted_y / total_weight))
+                            weighted_x = np.sum(x_indices * weights) / total_weight
+                            weighted_y = np.sum(y_indices * weights) / total_weight
+
+                            best_x = int(round(weighted_x))
+                            best_y = int(round(weighted_y))
 
                             # 确保结果在搜索范围内
                             best_x = max(min_x, min(max_x, best_x))
@@ -262,7 +312,6 @@ class VectorFieldCalculator:
 
                             # 如果位置变化足够大，则更新中心点
                             if (best_x != center_x or best_y != center_y) and position_change > 0.5:
-                                # 更新中心点位置
                                 center_x, center_y = best_x, best_y
                                 updated_centers.append([center_x, center_y])
 

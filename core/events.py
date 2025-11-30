@@ -50,6 +50,12 @@ class EventType(Enum):
     # 键盘事件
     KEY_PRESSED = "key_pressed"
     KEY_RELEASED = "key_released"
+    
+    # 窗口相关事件
+    WINDOW_CREATED = "window_created"
+    WINDOW_RESIZED = "window_resized"
+    WINDOW_CLOSED = "window_closed"
+    ZOOM_CHANGED = "zoom_changed"
 
 class Event:
     """事件类"""

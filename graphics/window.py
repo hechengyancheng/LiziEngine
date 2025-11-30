@@ -40,15 +40,18 @@ class WindowManager:
             self._state_manager = state_manager
             self._window = None
             self._app_core = None
-            self._initialized = False
             self._lock = threading.Lock()
             self._initialized = True
 
     def create_window(self, title: str = "LiziEngine", width: int = 800, height: int = 600) -> Optional[int]:
         """创建OpenGL窗口"""
         # 初始化GLFW
-        if not glfw.init():
-            print("[窗口管理] 初始化GLFW失败")
+        try:
+            if not glfw.init():
+                print("[窗口管理] 初始化GLFW失败")
+                return None
+        except Exception as e:
+            print(f"[窗口管理] 初始化GLFW时发生错误: {e}")
             return None
 
         # 设置窗口提示
@@ -102,6 +105,11 @@ class WindowManager:
                 glfw.terminate()
                 return None
             print(f"[窗口管理] 窗口创建成功: {width}x{height}")
+        except KeyboardInterrupt:
+            # 特别处理键盘中断，确保资源正确释放
+            print("[窗口管理] 创建窗口被中断")
+            glfw.terminate()
+            raise  # 重新抛出中断，让上层处理
         except Exception as e:
             print(f"[窗口管理] 创建窗口时发生错误: {e}")
             print("[窗口管理] 尝试使用基本设置重新创建窗口")
@@ -118,13 +126,31 @@ class WindowManager:
                     glfw.terminate()
                     return None
                 print(f"[窗口管理] 使用基本设置创建窗口成功: {width}x{height}")
+            except KeyboardInterrupt:
+                # 特别处理键盘中断，确保资源正确释放
+                print("[窗口管理] 使用基本设置创建窗口被中断")
+                glfw.terminate()
+                raise  # 重新抛出中断，让上层处理
             except Exception as e2:
                 print(f"[窗口管理] 使用基本设置创建窗口仍然失败: {e2}")
                 glfw.terminate()
                 return None
 
         # 设置窗口为当前上下文
-        glfw.make_context_current(self._window)
+        try:
+            glfw.make_context_current(self._window)
+            # 验证上下文是否成功创建
+            if not glfw.get_window_attrib(self._window, glfw.CONTEXT_VERSION_MAJOR):
+                print("[窗口管理] OpenGL上下文创建失败")
+                glfw.destroy_window(self._window)
+                self._window = None
+                return None
+            print("[窗口管理] OpenGL上下文创建成功")
+        except Exception as e:
+            print(f"[窗口管理] 设置OpenGL上下文失败: {e}")
+            glfw.destroy_window(self._window)
+            self._window = None
+            return None
 
         # 检查OpenGL版本
         try:
@@ -166,7 +192,7 @@ class WindowManager:
 
         # 发布窗口创建事件
         self._event_bus.publish(Event(
-            EventType.WINDOW_CREATED if hasattr(EventType, 'WINDOW_CREATED') else EventType.VIEW_CHANGED,
+            EventType.WINDOW_CREATED,
             {"title": title, "width": width, "height": height},
             "WindowManager"
         ))
@@ -175,328 +201,400 @@ class WindowManager:
 
     def _on_window_resize(self, window: int, width: int, height: int) -> None:
         """窗口大小改变回调"""
+        # 检查窗口是否有效
+        if window is None:
+            return
+            
         if height == 0:
             height = 1
 
         glViewport(0, 0, width, height)
 
-        # 更新状态
-        self._state_manager.update({
-            "window_width": width,
-            "window_height": height,
-            "view_changed": True
-        })
-
-        # 发布窗口大小改变事件
-        self._event_bus.publish(Event(
-            EventType.WINDOW_RESIZED if hasattr(EventType, 'WINDOW_RESIZED') else EventType.VIEW_CHANGED,
-            {"width": width, "height": height},
-            "WindowManager"
-        ))
-
-    def _on_key(self, window: int, key: int, scancode: int, action: int, mods: int) -> None:
-        """键盘按键回调"""
-        # 发布键盘事件
-        self._event_bus.publish(Event(
-            EventType.KEY_PRESSED,
-            {"key": key, "scancode": scancode, "action": action, "mods": mods},
-            "WindowManager"
-        ))
-
-        # ESC键退出
-        if key == glfw.KEY_ESCAPE and action == glfw.PRESS:
-            glfw.set_window_should_close(window, True)
-
-    def _on_cursor_pos(self, window: int, xpos: float, ypos: float) -> None:
-        """鼠标位置回调"""
-        # 处理中键拖动视图
-        if self._state_manager.get("mouse_middle_pressed", False):
-            # 获取初始状态
-            start_x = self._state_manager.get("mouse_middle_start_x", 0.0)
-            start_y = self._state_manager.get("mouse_middle_start_y", 0.0)
-            cam_start_x = self._state_manager.get("cam_start_x", 0.0)
-            cam_start_y = self._state_manager.get("cam_start_y", 0.0)
-            cam_zoom = self._state_manager.get("cam_zoom", 1.0)
-
-            # 计算鼠标移动距离并转换为世界坐标
-            dx = (start_x - xpos) / cam_zoom
-            dy = (start_y - ypos) / cam_zoom
-
-            # 更新相机位置
-            new_cam_x = cam_start_x + dx
-            new_cam_y = cam_start_y + dy
-
+        # 使用锁保护共享状态更新
+        with self._lock:
             # 更新状态
             self._state_manager.update({
-                "cam_x": new_cam_x,
-                "cam_y": new_cam_y,
+                "window_width": width,
+                "window_height": height,
                 "view_changed": True
             })
 
-            # 发布视图变更事件
+            # 发布窗口大小改变事件
             self._event_bus.publish(Event(
-                EventType.VIEW_CHANGED,
-                {"cam_x": new_cam_x, "cam_y": new_cam_y},
+                EventType.WINDOW_RESIZED,
+                {"width": width, "height": height},
                 "WindowManager"
             ))
+
+    def _on_key(self, window: int, key: int, scancode: int, action: int, mods: int) -> None:
+        """键盘按键回调"""
+        # 检查窗口是否有效
+        if window is None:
+            return
+            
+        # 使用锁保护共享状态访问和修改
+        with self._lock:
+            # 发布键盘事件
+            self._event_bus.publish(Event(
+                EventType.KEY_PRESSED,
+                {"key": key, "scancode": scancode, "action": action, "mods": mods},
+                "WindowManager"
+            ))
+
+            # ESC键退出
+            if key == glfw.KEY_ESCAPE and action == glfw.PRESS:
+                glfw.set_window_should_close(window, True)
+
+    def _on_cursor_pos(self, window: int, xpos: float, ypos: float) -> None:
+        """鼠标位置回调"""
+        # 检查窗口是否有效
+        if window is None:
+            return
+            
+        # 使用锁保护共享状态访问和修改
+        with self._lock:
+            # 处理中键拖动视图
+            if self._state_manager.get("mouse_middle_pressed", False):
+                # 获取初始状态
+                start_x = self._state_manager.get("mouse_middle_start_x", 0.0)
+                start_y = self._state_manager.get("mouse_middle_start_y", 0.0)
+                cam_start_x = self._state_manager.get("cam_start_x", 0.0)
+                cam_start_y = self._state_manager.get("cam_start_y", 0.0)
+                cam_zoom = self._state_manager.get("cam_zoom", 1.0)
+
+                # 计算鼠标移动距离并转换为世界坐标
+                dx = (start_x - xpos) / cam_zoom
+                dy = (start_y - ypos) / cam_zoom
+
+                # 更新相机位置
+                new_cam_x = cam_start_x + dx
+                new_cam_y = cam_start_y + dy
+
+                # 更新状态
+                self._state_manager.update({
+                    "cam_x": new_cam_x,
+                    "cam_y": new_cam_y,
+                    "view_changed": True
+                })
+
+                # 发布视图变更事件
+                self._event_bus.publish(Event(
+                    EventType.VIEW_CHANGED,
+                    {"cam_x": new_cam_x, "cam_y": new_cam_y},
+                    "WindowManager"
+                ))
 
         # 获取窗口尺寸
         width, height = glfw.get_window_size(window)
 
-        # 获取相机参数
-        cam_x = self._state_manager.get("cam_x", 0.0)
-        cam_y = self._state_manager.get("cam_y", 0.0)
-        cam_zoom = self._state_manager.get("cam_zoom", 1.0)
+        # 使用锁保护共享状态访问和修改
+        with self._lock:
+            # 获取相机参数
+            cam_x = self._state_manager.get("cam_x", 0.0)
+            cam_y = self._state_manager.get("cam_y", 0.0)
+            cam_zoom = self._state_manager.get("cam_zoom", 1.0)
 
-        # 计算世界坐标
-        half_w = (width / 2.0) / cam_zoom
-        half_h = (height / 2.0) / cam_zoom
+            # 计算世界坐标
+            half_w = (width / 2.0) / cam_zoom
+            half_h = (height / 2.0) / cam_zoom
 
-        world_x = cam_x - half_w + (xpos / width) * (2 * half_w)
-        world_y = cam_y - half_h + (ypos / height) * (2 * half_h)
+            world_x = cam_x - half_w + (xpos / width) * (2 * half_w)
+            world_y = cam_y - half_h + (ypos / height) * (2 * half_h)
 
-        # 获取网格单元大小
-        cell_size = config_manager.get("rendering.cell_size", 1.0)
+            # 获取网格单元大小
+            cell_size = config_manager.get("rendering.cell_size", 1.0)
 
-        # 计算网格坐标
-        grid_x = int(world_x / cell_size)
-        grid_y = int(world_y / cell_size)
+            # 计算网格坐标
+            grid_x = int(world_x / cell_size)
+            grid_y = int(world_y / cell_size)
 
-        # 更新状态
-        self._state_manager.update({
-            "mouse_x": xpos,
-            "mouse_y": ypos,
-            "world_x": world_x,
-            "world_y": world_y,
-            "grid_x": grid_x,
-            "grid_y": grid_y
-        })
+            # 更新状态
+            self._state_manager.update({
+                "mouse_x": xpos,
+                "mouse_y": ypos,
+                "world_x": world_x,
+                "world_y": world_y,
+                "grid_x": grid_x,
+                "grid_y": grid_y
+            })
 
-        # 获取当前网格数据
-        grid = app_core.grid_manager.grid
-        if grid is not None:
-            # 确保在网格范围内
-            if 0 <= grid_y < grid.shape[0] and 0 <= grid_x < grid.shape[1]:
-                # 获取当前位置的向量
-                vector = grid[grid_y, grid_x]
-                self._state_manager.update({
-                    "display_vec_x": float(vector[0]),
-                    "display_vec_y": float(vector[1])
-                })
+            # 获取当前网格数据
+            grid = app_core.grid_manager.grid
+            if grid is not None:
+                # 确保在网格范围内
+                if 0 <= grid_y < grid.shape[0] and 0 <= grid_x < grid.shape[1]:
+                    # 获取当前位置的向量
+                    vector = grid[grid_y, grid_x]
+                    self._state_manager.update({
+                        "display_vec_x": float(vector[0]),
+                        "display_vec_y": float(vector[1])
+                    })
+                else:
+                    # 如果不在网格范围内，重置为0
+                    self._state_manager.update({
+                        "display_vec_x": 0.0,
+                        "display_vec_y": 0.0
+                    })
             else:
-                # 如果不在网格范围内，重置为0
+                # 如果没有网格数据，重置为0
                 self._state_manager.update({
                     "display_vec_x": 0.0,
                     "display_vec_y": 0.0
                 })
-        else:
-            # 如果没有网格数据，重置为0
-            self._state_manager.update({
-                "display_vec_x": 0.0,
-                "display_vec_y": 0.0
-            })
 
-        # 发布鼠标移动事件
-        self._event_bus.publish(Event(
-            EventType.MOUSE_MOVED if hasattr(EventType, 'MOUSE_MOVED') else EventType.VIEW_CHANGED,
-            {"x": xpos, "y": ypos, "grid_x": grid_x, "grid_y": grid_y},
-            "WindowManager"
-        ))
+            # 发布鼠标移动事件
+            self._event_bus.publish(Event(
+                EventType.MOUSE_MOVED,
+                {"x": xpos, "y": ypos, "grid_x": grid_x, "grid_y": grid_y},
+                "WindowManager"
+            ))
 
     def _on_mouse_button(self, window: int, button: int, action: int, mods: int) -> None:
         """鼠标按键回调"""
+        # 检查窗口是否有效
+        if window is None:
+            return
+            
         # 获取鼠标位置
         xpos, ypos = glfw.get_cursor_pos(window)
-
-        # 获取网格坐标
-        grid_x = self._state_manager.get("grid_x", 0)
-        grid_y = self._state_manager.get("grid_y", 0)
-
-        # 处理中键拖动视图功能
-        if button == glfw.MOUSE_BUTTON_MIDDLE:  # 中键
-            if action == glfw.PRESS:  # 按下
-                # 记录鼠标中键按下状态和初始位置
-                self._state_manager.update({
-                    "mouse_middle_pressed": True,
-                    "mouse_middle_start_x": xpos,
-                    "mouse_middle_start_y": ypos,
-                    "cam_start_x": self._state_manager.get("cam_x", 0.0),
-                    "cam_start_y": self._state_manager.get("cam_y", 0.0)
-                })
-            elif action == glfw.RELEASE:  # 释放
-                # 清除鼠标中键按下状态
-                self._state_manager.set("mouse_middle_pressed", False)
-
-        # 获取网格数据
-        grid = app_core.grid_manager.grid
-        if grid is not None and button == 0 and action == 1:  # 左键按下
-            # 获取当前向量大小
-            magnitude = config_manager.get("vector_field.default_vector_length", 1.0)
-
-            # 获取画笔大小
-            brush_size = config_manager.get("vector_field.default_brush_size", 1)
-
-            # 获取是否反转向量
-            reverse_vector = self._state_manager.get("reverse_vector", False)
+        
+        # 获取窗口尺寸
+        width, height = glfw.get_window_size(window)
+        
+        # 使用锁保护共享状态访问和修改
+        with self._lock:
+            # 获取相机参数
+            cam_x = self._state_manager.get("cam_x", 0.0)
+            cam_y = self._state_manager.get("cam_y", 0.0)
+            cam_zoom = self._state_manager.get("cam_zoom", 1.0)
             
-            # 获取向量模式（0=辐射状, 1=单一方向, 2=顺时针旋转）
-            vector_mode = self._state_manager.get("vector_mode", 0)
+            # 计算世界坐标
+            half_w = (width / 2.0) / cam_zoom
+            half_h = (height / 2.0) / cam_zoom
+            
+            world_x = cam_x - half_w + (xpos / width) * (2 * half_w)
+            world_y = cam_y - half_h + (ypos / height) * (2 * half_h)
+            
+            # 获取网格单元大小
+            cell_size = config_manager.get("rendering.cell_size", 1.0)
+            
+            # 计算网格坐标
+            grid_x = int(world_x / cell_size)
+            grid_y = int(world_y / cell_size)
 
-            # 应用画笔效果
-            updates = {}
-            for dy_offset in range(-brush_size + 1, brush_size):
-                for dx_offset in range(-brush_size + 1, brush_size):
-                    # 计算距离中心的距离
-                    dist = np.sqrt(dx_offset**2 + dy_offset**2)
-                    if dist < brush_size:
-                        # 计算实际影响的网格位置
-                        target_y = grid_y + dy_offset
-                        target_x = grid_x + dx_offset
+            # 处理中键拖动视图功能
+            if button == glfw.MOUSE_BUTTON_MIDDLE:  # 中键
+                if action == glfw.PRESS:  # 按下
+                    # 记录鼠标中键按下状态和初始位置
+                    self._state_manager.update({
+                        "mouse_middle_pressed": True,
+                        "mouse_middle_start_x": xpos,
+                        "mouse_middle_start_y": ypos,
+                        "cam_start_x": self._state_manager.get("cam_x", 0.0),
+                        "cam_start_y": self._state_manager.get("cam_y", 0.0)
+                    })
+                elif action == glfw.RELEASE:  # 释放
+                    # 清除鼠标中键按下状态
+                    self._state_manager.set("mouse_middle_pressed", False)
 
-                        # 确保在网格范围内
-                        if 0 <= target_y < grid.shape[0] and 0 <= target_x < grid.shape[1]:
-                            # 获取当前位置的现有向量
-                            current_vx = float(grid[target_y, target_x, 0])
-                            current_vy = float(grid[target_y, target_x, 1])
+            # 获取网格数据
+            # 使用get_raw_grid方法获取原始网格数据引用，避免创建副本
+            grid = app_core.grid_manager.get_raw_grid()
+            if grid is not None and button == glfw.MOUSE_BUTTON_LEFT and action == glfw.PRESS:  # 左键按下
+                # 添加调试信息
+                print(f"[窗口管理] 鼠标左键点击: 屏幕坐标({xpos:.1f}, {ypos:.1f}), 网格坐标({grid_x}, {grid_y})")
+                
+                # 检查网格坐标是否有效
+                if not (0 <= grid_x < grid.shape[1] and 0 <= grid_y < grid.shape[0]):
+                    print(f"[窗口管理] 鼠标点击位置超出网格范围: ({grid_x}, {grid_y})")
+                    return
+                # 获取当前向量大小
+                magnitude = config_manager.get("vector_field.default_vector_length", 1.0)
 
-                            # 根据距离调整向量大小的影响
-                            influence = 1.0 - (dist / brush_size)
+                # 获取画笔大小
+                brush_size = config_manager.get("vector_field.default_brush_size", 1)
 
-                            # 根据向量模式计算新向量
-                            if vector_mode == 0:
-                                # 辐射状模式 - 以鼠标为中心，默认朝外
-                                # 计算从鼠标位置到目标点的向量
-                                dx = target_x - grid_x
-                                dy = target_y - grid_y
+                # 获取是否反转向量
+                reverse_vector = self._state_manager.get("reverse_vector", False)
+            
+                # 获取向量模式（0=辐射状, 1=单一方向, 2=顺时针旋转）
+                vector_mode = self._state_manager.get("vector_mode", 0)
 
-                                # 计算距离
-                                point_dist = np.sqrt(dx**2 + dy**2)
+                # 应用画笔效果
+                updates = {}
+                for dy_offset in range(-brush_size + 1, brush_size):
+                    for dx_offset in range(-brush_size + 1, brush_size):
+                        # 计算距离中心的距离
+                        dist = np.sqrt(dx_offset**2 + dy_offset**2)
+                        if dist < brush_size:
+                            # 计算实际影响的网格位置
+                            target_y = grid_y + dy_offset
+                            target_x = grid_x + dx_offset
 
-                                if point_dist > 0.001:  # 避免除以零
-                                    # 归一化方向向量
-                                    dir_x = dx / point_dist
-                                    dir_y = dy / point_dist
+                            # 确保在网格范围内
+                            if 0 <= target_y < grid.shape[0] and 0 <= target_x < grid.shape[1]:
+                                # 获取当前位置的现有向量
+                                current_vx = float(grid[target_y, target_x, 0])
+                                current_vy = float(grid[target_y, target_x, 1])
 
-                                    # 根据是否反转向量决定方向
-                                    if reverse_vector:
-                                        dir_x = -dir_x
-                                        dir_y = -dir_y
+                                # 根据距离调整向量大小的影响
+                                influence = max(0.0, 1.0 - (dist / brush_size))
 
-                                    # 应用大小和影响因子
-                                    new_vx = dir_x * influence * magnitude
-                                    new_vy = dir_y * influence * magnitude
-                                else:
-                                    # 如果是鼠标位置本身，创建一个默认向量
+                                # 根据向量模式计算新向量
+                                if vector_mode == 0:
+                                    # 辐射状模式 - 以鼠标为中心，默认朝外
+                                    # 计算从鼠标位置到目标点的向量
+                                    dx = target_x - grid_x
+                                    dy = target_y - grid_y
+
+                                    # 计算距离
+                                    point_dist = np.sqrt(dx**2 + dy**2)
+
+                                    if point_dist > 0.001:  # 避免除以零
+                                        # 归一化方向向量
+                                        dir_x = dx / point_dist
+                                        dir_y = dy / point_dist
+
+                                        # 根据是否反转向量决定方向
+                                        if reverse_vector:
+                                            dir_x = -dir_x
+                                            dir_y = -dir_y
+
+                                        # 应用大小和影响因子
+                                        new_vx = dir_x * influence * magnitude
+                                        new_vy = dir_y * influence * magnitude
+                                    else:
+                                        # 如果是鼠标位置本身，创建一个默认向量
+                                        if reverse_vector:
+                                            new_vx = -influence * magnitude
+                                        else:
+                                            new_vx = influence * magnitude
+                                        new_vy = 0
+                                    
+                                    # 添加到更新字典
+                                    updates[(target_y, target_x)] = (new_vx, new_vy)
+                                elif vector_mode == 1:
+                                    # 单一方向模式 - 所有向量使用相同方向
+                                    # 默认向右，如果反转则向左
                                     if reverse_vector:
                                         new_vx = -influence * magnitude
                                     else:
                                         new_vx = influence * magnitude
                                     new_vy = 0
-                            elif vector_mode == 1:
-                                # 单一方向模式 - 所有向量使用相同方向
-                                # 默认向右，如果反转则向左
-                                if reverse_vector:
-                                    new_vx = -influence * magnitude
+                                    
+                                    # 添加到更新字典
+                                    updates[(target_y, target_x)] = (new_vx, new_vy)
                                 else:
-                                    new_vx = influence * magnitude
-                                new_vy = 0
-                            else:
-                                # 顺时针旋转模式 - 向量围绕鼠标顺时针旋转
-                                # 计算从鼠标位置到目标点的向量
-                                dx = target_x - grid_x
-                                dy = target_y - grid_y
+                                    # 顺时针旋转模式 - 向量围绕鼠标顺时针旋转
+                                    # 计算从鼠标位置到目标点的向量
+                                    dx = target_x - grid_x
+                                    dy = target_y - grid_y
 
-                                # 计算距离
-                                point_dist = np.sqrt(dx**2 + dy**2)
+                                    # 计算距离
+                                    point_dist = np.sqrt(dx**2 + dy**2)
 
-                                if point_dist > 0.001:  # 避免除以零
-                                    # 计算切向量（顺时针旋转90度）
-                                    if reverse_vector:
-                                        # 反转时逆时针旋转
-                                        dir_x = -dy / point_dist
-                                        dir_y = dx / point_dist
+                                    if point_dist > 0.001:  # 避免除以零
+                                        # 计算切向量（顺时针旋转90度）
+                                        if reverse_vector:
+                                            # 反转时逆时针旋转
+                                            dir_x = -dy / point_dist
+                                            dir_y = dx / point_dist
+                                        else:
+                                            # 默认顺时针旋转
+                                            dir_x = dy / point_dist
+                                            dir_y = -dx / point_dist
+
+                                        # 应用大小和影响因子
+                                        new_vx = dir_x * influence * magnitude
+                                        new_vy = dir_y * influence * magnitude
                                     else:
-                                        # 默认顺时针旋转
-                                        dir_x = dy / point_dist
-                                        dir_y = -dx / point_dist
+                                        # 如果是鼠标位置本身，创建一个默认向量
+                                        if reverse_vector:
+                                            new_vx = 0
+                                            new_vy = -influence * magnitude
+                                        else:
+                                            new_vx = 0
+                                            new_vy = influence * magnitude
 
-                                    # 应用大小和影响因子
-                                    new_vx = dir_x * influence * magnitude
-                                    new_vy = dir_y * influence * magnitude
-                                else:
-                                    # 如果是鼠标位置本身，创建一个默认向量
-                                    if reverse_vector:
-                                        new_vx = 0
-                                        new_vy = -influence * magnitude
-                                    else:
-                                        new_vx = 0
-                                        new_vy = influence * magnitude
+                                    updates[(target_y, target_x)] = (new_vx, new_vy)
+                                    print(f"[窗口管理] 更新点({target_x}, {target_y})的向量为({new_vx:.2f}, {new_vy:.2f})")
 
-                            updates[(target_y, target_x)] = (new_vx, new_vy)
-
-            # 使用统一接口更新网格
-            if updates:
-                # 通过事件系统发布网格更新请求，而不是直接调用app_controller
-                # 这样可以避免循环导入问题
-                if not hasattr(EventType, 'GRID_UPDATE_REQUEST'):
-                    print("[窗口管理] 错误: GRID_UPDATE_REQUEST 事件类型不存在，无法更新网格")
-                    return
+                # 使用统一接口更新网格
+                if updates:
+                    # 通过事件系统发布网格更新请求，而不是直接调用app_controller
+                    # 这样可以避免循环导入问题
+                    try:
+                        event_type = EventType.GRID_UPDATE_REQUEST
+                    except AttributeError:
+                        print("[窗口管理] 错误: GRID_UPDATE_REQUEST 事件类型不存在，无法更新网格")
+                        return
                 
-                #print("[窗口管理] 发布网格更新请求")
+                    #print("[窗口管理] 发布网格更新请求")
 
-                # 记录向量场中心点位置（支持多个中心点）
-                centers = self._state_manager.get("vector_field_centers", [])
-                # 检查是否已存在相近的中心点，避免重复添加
-                exists = False
-                for center in centers:
-                    if len(center) >= 2 and abs(center[0] - grid_x) < 5 and abs(center[1] - grid_y) < 5:
-                        exists = True
-                        break
+                    # 记录向量场中心点位置（支持多个中心点）
+                    centers = self._state_manager.get("vector_field_centers", [])
+                    # 检查是否已存在相近的中心点，避免重复添加
+                    exists = False
+                    for center in centers:
+                        if len(center) >= 2 and abs(center[0] - grid_x) < 5 and abs(center[1] - grid_y) < 5:
+                            exists = True
+                            break
 
-                if not exists:
-                    centers.append([grid_x, grid_y])
-                    self._state_manager.set("vector_field_centers", centers)
+                    if not exists:
+                        centers.append([grid_x, grid_y])
+                        self._state_manager.set("vector_field_centers", centers)
 
-                self._event_bus.publish(Event(
-                    EventType.GRID_UPDATE_REQUEST,
-                    {"updates": updates},
-                    "WindowManager"
-                ))
+                    # 添加调试信息
+                    print(f"[窗口管理] 发布网格更新请求，更新点数: {len(updates)}")
+                    
+                    self._event_bus.publish(Event(
+                        event_type,
+                        {"updates": updates},
+                        "WindowManager"
+                    ))
                 
-        # 发布鼠标按键事件
-        self._event_bus.publish(Event(
-            EventType.MOUSE_CLICKED,
-            {"button": button, "action": action, "mods": mods, "x": xpos, "y": ypos, "grid_x": grid_x, "grid_y": grid_y},
-            "WindowManager"
-        ))
+            # 发布鼠标按键事件
+            self._event_bus.publish(Event(
+                EventType.MOUSE_CLICKED,
+                {"button": button, "action": action, "mods": mods, "x": xpos, "y": ypos, "grid_x": grid_x, "grid_y": grid_y},
+                "WindowManager"
+            ))
 
     def _on_scroll(self, window: int, xoffset: float, yoffset: float) -> None:
         """鼠标滚轮回调"""
-        # 获取当前缩放级别
-        cam_zoom = self._state_manager.get("cam_zoom", 1.0)
+        # 检查窗口是否有效
+        if window is None:
+            return
+            
+        # 使用锁保护共享状态访问和修改
+        with self._lock:
+            # 获取当前缩放级别
+            cam_zoom = self._state_manager.get("cam_zoom", 1.0)
 
-        # 根据滚轮方向调整缩放级别
-        zoom_factor = 1.1
-        if yoffset > 0:
-            cam_zoom *= zoom_factor
-        else:
-            cam_zoom /= zoom_factor
+            # 根据滚轮方向调整缩放级别
+            zoom_factor = config_manager.get("rendering.zoom_factor", 1.1)
+            if yoffset > 0:
+                cam_zoom *= zoom_factor
+            else:
+                cam_zoom /= zoom_factor
 
-        # 限制缩放范围
-        cam_zoom = max(0.1, min(10.0, cam_zoom))
+            # 限制缩放范围
+            min_zoom = config_manager.get("rendering.min_zoom", 0.1)
+            max_zoom = config_manager.get("rendering.max_zoom", 10.0)
+            cam_zoom = max(min_zoom, min(max_zoom, cam_zoom))
 
-        # 更新状态
-        self._state_manager.update({
-            "cam_zoom": cam_zoom,
-            "view_changed": True
-        })
+            # 更新状态
+            self._state_manager.update({
+                "cam_zoom": cam_zoom,
+                "view_changed": True
+            })
 
-        # 发布缩放事件
-        self._event_bus.publish(Event(
-            EventType.ZOOM_CHANGED if hasattr(EventType, 'ZOOM_CHANGED') else EventType.VIEW_CHANGED,
-            {"zoom": cam_zoom},
-            "WindowManager"
-        ))
+            # 发布缩放事件
+            self._event_bus.publish(Event(
+                EventType.ZOOM_CHANGED,
+                {"zoom": cam_zoom},
+                "WindowManager"
+            ))
 
     def get_window(self) -> Optional[int]:
         """获取窗口句柄"""
@@ -547,23 +645,39 @@ class WindowManager:
         """清理窗口资源"""
         if self._window is not None:
             # 清理渲染器
-            vector_field_renderer.cleanup()
+            try:
+                vector_field_renderer.cleanup()
+                print("[窗口管理] 渲染器清理完成")
+            except Exception as e:
+                print(f"[窗口管理] 渲染器清理失败: {e}")
 
             # 销毁窗口
-            glfw.destroy_window(self._window)
-            self._window = None
+            try:
+                glfw.destroy_window(self._window)
+                self._window = None
+                print("[窗口管理] 窗口销毁完成")
+            except Exception as e:
+                print(f"[窗口管理] 窗口销毁失败: {e}")
+                self._window = None  # 确保即使失败也重置引用
 
             # 终止GLFW
-            glfw.terminate()
+            try:
+                glfw.terminate()
+                print("[窗口管理] GLFW终止完成")
+            except Exception as e:
+                print(f"[窗口管理] GLFW终止失败: {e}")
 
             print("[窗口管理] 窗口资源清理完成")
 
             # 发布窗口关闭事件
-            self._event_bus.publish(Event(
-                EventType.WINDOW_CLOSED if hasattr(EventType, 'WINDOW_CLOSED') else EventType.VIEW_CHANGED,
-                {},
-                "WindowManager"
-            ))
+            try:
+                self._event_bus.publish(Event(
+                    EventType.WINDOW_CLOSED,
+                    {},
+                    "WindowManager"
+                ))
+            except Exception as e:
+                print(f"[窗口管理] 发布窗口关闭事件失败: {e}")
 
 # 全局窗口管理器实例
 window_manager = WindowManager()

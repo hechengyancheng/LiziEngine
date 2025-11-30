@@ -29,23 +29,51 @@ class OpenCLComputeManager:
             self._initialized = True
 
     def get_compute_kernel_src(self) -> str:
-        """从配置管理器获取OpenCL计算内核源代码，动态设置权重参数"""
+        """
+        获取动态生成的OpenCL计算内核源代码
+
+        该方法根据当前配置动态生成OpenCL内核代码, 允许在运行时调整向量场计算参数.
+        内核主要功能是对每个网格点上的向量进行加权平均计算, 考虑自身向量和相邻向量的影响.
+
+        配置参数:
+            self_weight: 自身向量的权重系数, 控制向量场保持自身特性的程度
+            neighbor_weight: 相邻向量的权重系数, 控制向量场平滑程度
+            enable_average: 是否启用简单平均模式(不考虑权重)
+            enable_normalization: 是否对结果进行归一化处理
+
+        返回:
+            str: 生成的OpenCL内核源代码字符串
+        """
+        # 从配置管理器获取计算参数
         self_weight = config_manager.get("vector_field.vector_self_weight", 1.0)
         neighbor_weight = config_manager.get("vector_field.vector_neighbor_weight", 0.1)
         enable_average = config_manager.get("vector_field.enable_vector_average", False)
         enable_normalization = config_manager.get("vector_field.enable_vector_normalization", False)
 
+        # OpenCL内核源代码模板
+        # 该内核在GPU上并行执行, 每个工作项处理一个网格点
         kernel_src = """
+// OpenCL向量场计算内核
+// 功能: 对每个网格点上的向量进行加权平均计算, 考虑自身向量和相邻向量的影响
+// 参数说明:
+//   input: 输入向量场数据, 每个元素为float2类型, 表示一个二维向量
+//   output: 输出向量场数据, 计算结果将写入此缓冲区
+//   width/height: 向量场的宽度和高度(网格尺寸)
+//   include_self: 是否在计算中包含中心点自身的向量
+//   enable_average: 是否启用简单平均模式(忽略权重)
+//   enable_normalization: 是否对结果进行归一化处理
+//   self_weight: 自身向量的权重系数
+//   neighbor_weight: 相邻向量的权重系数
 __kernel void vector_field_compute(
-    __global const float2* input,
-    __global float2* output,
-    const int width,
-    const int height,
-    const int include_self,
-    const int enable_average,
-    const int enable_normalization,
-    const float self_weight,
-    const float neighbor_weight
+    __global const float2* input,        // 输入向量场
+    __global float2* output,              // 输出向量场
+    const int width,                      // 向量场宽度
+    const int height,                     // 向量场高度
+    const int include_self,               // 是否包含自身向量
+    const int enable_average,             // 是否启用简单平均
+    const int enable_normalization,        // 是否启用归一化
+    const float self_weight,              // 自身向量权重
+    const float neighbor_weight           // 相邻向量权重
 ) {
     int x = get_global_id(0);
     int y = get_global_id(1);
