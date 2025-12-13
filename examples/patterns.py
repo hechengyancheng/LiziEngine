@@ -119,6 +119,12 @@ def main():
         # 处理鼠标滚轮缩放
         ui_manager.process_scroll()
 
+        # 更新标记位置（跟随向量场找到中心）
+        try:
+            ui_manager.update_markers(grid)
+        except Exception as e:
+            print(f"[错误] 更新标记异常: {e}")
+
         # 渲染
         window.render(grid)
 

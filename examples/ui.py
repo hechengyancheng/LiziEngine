@@ -17,6 +17,8 @@ class UIManager:
         # 保持最后鼠标位置以便拖拽计算（像素坐标）
         self._last_mouse_x = None
         self._last_mouse_y = None
+        # 标记列表，存储浮点网格坐标 {'x':float,'y':float}
+        self.markers = []
 
     def register_callbacks(self, grid: np.ndarray, on_space=None, on_r=None, on_g=None, on_c=None, on_u=None):
         self._grid = grid
@@ -61,7 +63,13 @@ class UIManager:
                 except Exception as e:
                     print(f"[错误] on_c 回调异常: {e}")
             grid.fill(0.0)
-            self.app_core.state_manager.update({"grid_updated": True})
+            # 清除所有标记并同步到 state_manager
+            try:
+                self.markers.clear()
+                self.app_core.state_manager.set("markers", list(self.markers))
+            except Exception:
+                pass
+            self.app_core.state_manager.update({"grid_updated": True, "view_changed": True})
 
         def on_u_press():
             if callable(on_u):
@@ -96,11 +104,20 @@ class UIManager:
                     return
 
                 radius = 8
-                magnitude = 1.0
+                magnitude = 0.8
 
                 print(f"[示例] 在网格位置放置向量场: ({gx}, {gy}), radius={radius}, mag={magnitude}")
 
                 self.vector_calculator.create_radial_pattern(grid, center=(gx, gy), radius=radius, magnitude=magnitude)
+
+                # 同时创建一个标记，初始放在点击处（浮点位置）
+                marker = {"x": float(gx), "y": float(gy)}
+                self.markers.append(marker)
+                # 将标记写入 state_manager 以便渲染器或外部代码读取
+                try:
+                    self.app_core.state_manager.set("markers", list(self.markers))
+                except Exception:
+                    pass
 
                 self.app_core.state_manager.update({"view_changed": True, "grid_updated": True})
             except Exception as e:
@@ -158,3 +175,73 @@ class UIManager:
             })
 
             window._scroll_y = 0
+
+    def update_markers(self, grid: np.ndarray, neighborhood: int = 5, move_factor: float = 0.2):
+        """根据周围向量平均方向移动标记以收敛到中心。
+
+        算法：在每个标记的邻域内计算平均向量(mean_v)，将标记按 -mean_v * move_factor 偏移。
+        这对径向场有效：向外的平均向量的负方向指向中心。
+        """
+        if not hasattr(grid, "ndim"):
+            return
+
+        h, w = grid.shape[0], grid.shape[1]
+
+        # 期望 grid 最后一维至少 2，代表 vx, vy
+        for m in self.markers:
+            x = m.get("x", 0.0)
+            y = m.get("y", 0.0)
+
+            # 整数邻域范围
+            cx = int(round(x))
+            cy = int(round(y))
+
+            sx = max(0, cx - neighborhood)
+            ex = min(w - 1, cx + neighborhood)
+            sy = max(0, cy - neighborhood)
+            ey = min(h - 1, cy + neighborhood)
+
+            sum_vx = 0.0
+            sum_vy = 0.0
+            count = 0
+
+            for yy in range(sy, ey + 1):
+                for xx in range(sx, ex + 1):
+                    try:
+                        if grid.ndim >= 3 and grid.shape[2] >= 2:
+                            vx = float(grid[yy, xx, 0])
+                            vy = float(grid[yy, xx, 1])
+                        else:
+                            # 如果只有一个通道，则无法计算方向，跳过
+                            continue
+                    except Exception:
+                        continue
+
+                    mag = (vx * vx + vy * vy) ** 0.5
+                    # 以幅值加权平均，使明显的向量影响更大
+                    sum_vx += vx * mag
+                    sum_vy += vy * mag
+                    count += 1
+
+            if count == 0:
+                continue
+
+            mean_vx = sum_vx / count
+            mean_vy = sum_vy / count
+
+            # 正方向朝向可能的中心
+            dx = mean_vx * move_factor
+            dy = mean_vy * move_factor
+
+            # 更新浮点位置
+            new_x = max(0.0, min(w - 1.0, x + dx))
+            new_y = max(0.0, min(h - 1.0, y + dy))
+
+            m["x"] = new_x
+            m["y"] = new_y
+
+        # 将标记写回 state_manager 以便界面绘制或外部使用
+        try:
+            self.app_core.state_manager.set("markers", list(self.markers))
+        except Exception:
+            pass

@@ -337,6 +337,75 @@ class VectorFieldRenderer(EventHandler):
         # 清除颜色和深度缓冲
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
+    def render_markers(self, cell_size: float = 1.0,
+                       cam_x: float = 0.0, cam_y: float = 0.0, cam_zoom: float = 1.0,
+                       viewport_width: int = 800, viewport_height: int = 600) -> None:
+        """渲染在 state_manager 中注册的标记（点）"""
+        if not self._initialized:
+            self.initialize()
+
+        markers = self._state_manager.get("markers", [])
+        if not markers:
+            return
+
+        # 统一颜色和点大小
+        marker_color = self._config_manager.get("marker_color", [1.0, 0.2, 0.2])
+        point_size = int(self._config_manager.get("marker_size", 8))
+
+        # 构建顶点数组，每个点 (x, y, r, g, b)
+        verts = np.zeros(len(markers) * 5, dtype=np.float32)
+        for i, m in enumerate(markers):
+            try:
+                gx = float(m.get("x", 0.0))
+                gy = float(m.get("y", 0.0))
+            except Exception:
+                gx = 0.0
+                gy = 0.0
+
+            wx = gx * cell_size
+            wy = gy * cell_size
+
+            verts[i * 5 + 0] = wx
+            verts[i * 5 + 1] = wy
+            verts[i * 5 + 2] = marker_color[0]
+            verts[i * 5 + 3] = marker_color[1]
+            verts[i * 5 + 4] = marker_color[2]
+
+        # 绑定VAO和VBO（可复用已有 _vao/_vbo）
+        glBindVertexArray(self._vao)
+        glBindBuffer(GL_ARRAY_BUFFER, self._vbo)
+
+        glBufferData(GL_ARRAY_BUFFER, verts.nbytes, verts, GL_DYNAMIC_DRAW)
+
+        pos_loc = self._shader_program.get_attribute_location("a_pos")
+        col_loc = self._shader_program.get_attribute_location("a_col")
+
+        if pos_loc >= 0:
+            glEnableVertexAttribArray(pos_loc)
+            glVertexAttribPointer(pos_loc, 2, GL_FLOAT, GL_FALSE, 5 * 4, ctypes.c_void_p(0))
+
+        if col_loc >= 0:
+            glEnableVertexAttribArray(col_loc)
+            glVertexAttribPointer(col_loc, 3, GL_FLOAT, GL_FALSE, 5 * 4, ctypes.c_void_p(2 * 4))
+
+        # 使用着色器并设置uniform
+        self._shader_program.use()
+        half_w = (viewport_width / 2.0) / cam_zoom
+        half_h = (viewport_height / 2.0) / cam_zoom
+        self._shader_program.set_uniform_vec2("u_center", (cam_x, cam_y))
+        self._shader_program.set_uniform_vec2("u_half", (half_w, half_h))
+
+        # 点大小
+        glPointSize(point_size)
+
+        # 绘制点
+        glDrawArrays(GL_POINTS, 0, len(markers))
+
+        # 清理绑定
+        glBindVertexArray(0)
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+        glUseProgram(0)
+
     def cleanup(self) -> None:
         """清理渲染器资源"""
         if not self._initialized:

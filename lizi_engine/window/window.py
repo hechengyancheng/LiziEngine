@@ -340,6 +340,20 @@ class Window(EventHandler):
             viewport_height=viewport_height
         )
 
+        # 渲染标记（如果有）
+        try:
+            self._renderer.render_markers(
+                cell_size=self._config_manager.get("cell_size", 1.0),
+                cam_x=cam_x,
+                cam_y=cam_y,
+                cam_zoom=cam_zoom,
+                viewport_width=viewport_width,
+                viewport_height=viewport_height
+            )
+        except Exception:
+            # 渲染标记不是关键路径，忽略错误以保证主渲染继续
+            pass
+
         # 交换缓冲区
         glfw.swap_buffers(self._window)
 
