@@ -7,7 +7,7 @@ import threading
 import numpy as np
 import time
 from typing import Optional, Dict, Any, Tuple, Callable, Union
-from .events import Event, EventType, event_bus, EventHandler
+from .events import Event, EventType, event_bus, EventHandler, EventBus
 from .state import StateManager, state_manager
 from .config import ConfigManager, config_manager
 from .container import container
@@ -17,7 +17,7 @@ from ..window.window import Window
 
 class GridManager(EventHandler):
     """网格数据管理器"""
-    def __init__(self, state_manager: StateManager, event_bus: event_bus.__class__):
+    def __init__(self, state_manager: StateManager, event_bus: "EventBus"):
         self._state_manager = state_manager
         self._event_bus = event_bus
         self._lock = threading.RLock()

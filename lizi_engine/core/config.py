@@ -50,18 +50,18 @@ class ConfigManager:
     def _init_default_config(self) -> None:
         """初始化默认配置"""
         # 网格配置
-        self.register_option("grid_width", 640, "网格宽度")
-        self.register_option("grid_height", 480, "网格高度")
-        self.register_option("cell_size", 1.0, "单元格大小")
+        self.register_option("grid_width", 640, "网格宽度", type="number")
+        self.register_option("grid_height", 480, "网格高度", type="number")
+        self.register_option("cell_size", 1.0, "单元格大小", type="number")
 
         # 向量场配置
         self.register_option("vector_color", [0.2, 0.6, 1.0], "向量颜色", type="array")
         self.register_option("vector_scale", 1.0, "向量缩放", type="number", min_value=0.1, max_value=10.0)
-        self.register_option("vector_self_weight", 1.0, "向量自身权重", type="number", min_value=0.0, max_value=10.0)
-        self.register_option("vector_neighbor_weight", 0.1, "向量邻居权重", type="number", min_value=0.0, max_value=10.0)
-        self.register_option("include_self", False, "是否包含自身向量", type="boolean")
+        self.register_option("vector_self_weight", 0.2, "向量自身权重", type="number", min_value=0.0, max_value=10.0)
+        self.register_option("vector_neighbor_weight", 0.2, "向量邻居权重", type="number", min_value=0.0, max_value=10.0)
+        self.register_option("include_self", True, "是否包含自身向量", type="boolean")
         self.register_option("enable_vector_average", False, "是否启用向量平均值", type="boolean")
-        self.register_option("enable_vector_normalization", True, "是否启用向量归一化", type="boolean")
+        self.register_option("enable_vector_normalization", False, "是否启用向量归一化", type="boolean")
 
         # 视图配置
         self.register_option("cam_x", 0.0, "相机X坐标", type="number")
@@ -276,4 +276,6 @@ class ConfigManager:
         return key in self._options
 
 # 全局配置管理器实例
-config_manager = ConfigManager()
+# 获取项目根目录下的config.json文件路径
+config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "config.json")
+config_manager = ConfigManager(config_path)

@@ -10,6 +10,7 @@ from ..core.config import config_manager
 from ..core.events import Event, EventType, event_bus, EventHandler, FunctionEventHandler
 from ..core.state import state_manager
 from ..graphics.renderer import VectorFieldRenderer
+from ..input import input_handler
 
 class Window(EventHandler):
     """窗口管理器"""
@@ -32,6 +33,7 @@ class Window(EventHandler):
         self._mouse_y = 0
         self._last_mouse_x = 0
         self._last_mouse_y = 0
+        self._scroll_y = 0  # 鼠标滚轮Y轴偏移
 
         # 键盘状态
         self._keys = {}
@@ -162,52 +164,37 @@ class Window(EventHandler):
         # 更新键盘状态
         if action == glfw.PRESS:
             self._keys[key] = True
-            self._event_bus.publish(Event(
-                EventType.KEY_PRESSED,
-                {"key": key, "scancode": scancode, "mods": mods},
-                "Window"
-            ))
         elif action == glfw.RELEASE:
             self._keys[key] = False
-            self._event_bus.publish(Event(
-                EventType.KEY_RELEASED,
-                {"key": key, "scancode": scancode, "mods": mods},
-                "Window"
-            ))
+            
+        # 使用input模块处理键盘事件
+        input_handler.handle_key_event(window, key, scancode, action, mods)
 
     def _mouse_button_callback(self, window, button, action, mods):
         """鼠标按钮事件回调"""
         if action == glfw.PRESS:
             self._mouse_pressed = True
             self._last_mouse_x, self._last_mouse_y = glfw.get_cursor_pos(window)
-            self._event_bus.publish(Event(
-                EventType.MOUSE_CLICKED,
-                {"button": button, "mods": mods},
-                "Window"
-            ))
         elif action == glfw.RELEASE:
             self._mouse_pressed = False
+            
+        # 使用input模块处理鼠标按钮事件
+        input_handler.handle_mouse_button_event(window, button, action, mods)
 
     def _cursor_pos_callback(self, window, xpos, ypos):
         """鼠标位置回调"""
         self._mouse_x = xpos
         self._mouse_y = ypos
-
-        # 发布鼠标移动事件
-        self._event_bus.publish(Event(
-            EventType.MOUSE_MOVED,
-            {"x": xpos, "y": ypos},
-            "Window"
-        ))
+        
+        # 使用input模块处理鼠标移动事件
+        input_handler.handle_cursor_position_event(window, xpos, ypos)
 
     def _scroll_callback(self, window, xoffset, yoffset):
         """鼠标滚轮回调"""
-        # 发布鼠标滚轮事件
-        self._event_bus.publish(Event(
-            EventType.MOUSE_SCROLLED,
-            {"xoffset": xoffset, "yoffset": yoffset},
-            "Window"
-        ))
+        # 更新Window类的滚轮状态
+        self._scroll_y = yoffset
+        # 使用input模块处理鼠标滚轮事件
+        input_handler.handle_scroll_event(window, xoffset, yoffset)
 
     def _handle_mouse_click(self, event: Event) -> None:
         """处理鼠标点击事件"""

@@ -14,6 +14,7 @@ from lizi_engine.core.container import container
 from lizi_engine.core.app import AppCore
 from lizi_engine.window.window import Window
 from lizi_engine.compute.vector_field import vector_calculator
+from lizi_engine.input import input_handler, KeyMap, MouseMap
 
 class PatternType(Enum):
     """向量场模式类型"""
@@ -62,7 +63,7 @@ def main():
         return
 
     # 获取网格
-    grid = app_core.grid_manager.init_grid(64, 48)
+    grid = app_core.grid_manager.init_grid(640, 480)
 
     # 当前模式索引
     current_pattern = 0
@@ -82,50 +83,102 @@ def main():
     # 运行主循环
     print("[示例] 开始主循环...")
     print("[示例] 按空格键切换模式，按R键重置视图，按G键切换网格显示，按C键清空网格")
+    print("[示例] 按U键切换实时更新")
     print("[示例] 使用鼠标左键拖动视图，使用鼠标滚轮缩放视图")
 
     # 初始化鼠标滚轮偏移
     mouse_scroll_y = 0
 
-    # 注册鼠标滚轮回调函数
-    def scroll_callback(window, xoffset, yoffset):
-        nonlocal mouse_scroll_y
-        mouse_scroll_y = yoffset
+    # 注册键盘回调函数
+    def on_space_press():
+        """空格键按下回调"""
+        nonlocal current_pattern
+        # 切换到下一个模式
+        current_pattern = (current_pattern + 1) % len(patterns)
+        pattern_name, pattern_type = patterns[current_pattern]
+        print(f"[示例] 切换到模式: {pattern_name}")
+        
+        # 创建新模式
+        create_pattern(grid, pattern_type)
+        
+        # 重置视图
+        app_core.view_manager.reset_view(grid.shape[1], grid.shape[0])
+    
+    def on_r_press():
+        """R键按下回调"""
+        app_core.view_manager.reset_view(grid.shape[1], grid.shape[0])
+    
+    def on_g_press():
+        """G键按下回调"""
+        show_grid = app_core.state_manager.get("show_grid", True)
+        app_core.state_manager.set("show_grid", not show_grid)
+    
+    def on_c_press():
+        """C键按下回调"""
+        grid.fill(0.0)
+    
+    def on_u_press():
+        """U键按下回调"""
+        nonlocal enable_update
+        enable_update = not enable_update
+        print(f"[示例] 实时更新已{'开启' if enable_update else '关闭'}")
+    
+    # 注册键盘回调
+    input_handler.register_key_callback(KeyMap.SPACE, MouseMap.PRESS, on_space_press)
+    input_handler.register_key_callback(KeyMap.R, MouseMap.PRESS, on_r_press)
+    input_handler.register_key_callback(KeyMap.G, MouseMap.PRESS, on_g_press)
+    input_handler.register_key_callback(KeyMap.C, MouseMap.PRESS, on_c_press)
+    input_handler.register_key_callback(KeyMap.U, MouseMap.PRESS, on_u_press)
 
-    # 设置鼠标滚轮回调
-    glfw.set_scroll_callback(window._window, scroll_callback)
+    # 添加更新标志
+    enable_update = True
 
     while not window.should_close:
         # 更新窗口
         window.update()
 
+        # 实时更新向量场
+        if enable_update:
+            # 使用计算模块的update_grid_with_adjacent_sum方法更新整个网格
+            # 添加include_self=True参数，确保每个向量都包含自身的值
+            vector_calculator.update_grid_with_adjacent_sum(grid, include_self=True)
+
         # 处理鼠标拖动
-        if window._mouse_pressed:
-            # 计算鼠标移动距离
-            dx = window._mouse_x - window._last_mouse_x
-            dy = window._mouse_y - window._last_mouse_y
+        try:
+            if window._mouse_pressed:
+                # 获取当前鼠标位置
+                x, y = window._mouse_x, window._mouse_y
+            
+                # 简化鼠标拖动处理
+            
+                # 计算鼠标移动距离
+                dx = x - window._last_mouse_x
+                dy = y - window._last_mouse_y
 
-            # 更新相机位置
-            cam_speed = 0.1
-            cam_x = app_core.state_manager.get("cam_x", 0.0) - dx * cam_speed
-            cam_y = app_core.state_manager.get("cam_y", 0.0) - dy * cam_speed  # 修复上下拖动方向
+                # 更新相机位置
+                cam_speed = 0.3
+                cam_x = app_core.state_manager.get("cam_x", 0.0) - dx * cam_speed
+                cam_y = app_core.state_manager.get("cam_y", 0.0) - dy * cam_speed  # 修复上下拖动方向
 
-            app_core.state_manager.update({
-                "cam_x": cam_x,
-                "cam_y": cam_y,
-                "view_changed": True
-            })
+                app_core.state_manager.update({
+                    "cam_x": cam_x,
+                    "cam_y": cam_y,
+                    "view_changed": True
+                })
 
-            # 更新最后鼠标位置
-            window._last_mouse_x = window._mouse_x
-            window._last_mouse_y = window._mouse_y
+                # 更新最后鼠标位置
+                window._last_mouse_x = x
+                window._last_mouse_y = y
+            # 鼠标没有按下时的处理
+        except Exception as e:
+            print(f"[错误] 鼠标拖动处理异常: {e}")
 
-        # 处理鼠标滚轮缩放
-        if mouse_scroll_y != 0:
+        # 处理鼠标滚轮缩放 - 使用Window类的鼠标滚轮状态
+        if hasattr(window, "_scroll_y") and window._scroll_y != 0:
             # 更新相机缩放
             cam_zoom = app_core.state_manager.get("cam_zoom", 1.0)
-            zoom_speed = 0.2
-            cam_zoom += mouse_scroll_y * zoom_speed  # 修复缩放方向
+            zoom_speed = 0.5
+            cam_zoom += window._scroll_y * zoom_speed  # 修复缩放方向
 
             # 限制缩放范围
             cam_zoom = max(0.1, min(10.0, cam_zoom))
@@ -134,46 +187,14 @@ def main():
                 "cam_zoom": cam_zoom,
                 "view_changed": True
             })
-
-            # 重置滚轮偏移
-            mouse_scroll_y = 0
+            
+            # 重置滚轮偏移，避免持续缩放
+            window._scroll_y = 0
 
         # 渲染
         window.render(grid)
 
-        # 处理键盘事件
-        # 注意：这里简化了键盘事件处理，实际应该通过事件系统处理
-        # 检查空格键是否被按下
-        if window._keys.get(glfw.KEY_SPACE):
-            # 切换到下一个模式
-            current_pattern = (current_pattern + 1) % len(patterns)
-            pattern_name, pattern_type = patterns[current_pattern]
-            print(f"[示例] 切换到模式: {pattern_name}")
-
-            # 创建新模式
-            create_pattern(grid, pattern_type)
-
-            # 重置视图
-            app_core.view_manager.reset_view(grid.shape[1], grid.shape[0])
-
-            # 清除按键状态，避免连续切换
-            window._keys[glfw.KEY_SPACE] = False
-
-        # 处理R键重置视图
-        if window._keys.get(glfw.KEY_R):
-            app_core.view_manager.reset_view(grid.shape[1], grid.shape[0])
-            window._keys[glfw.KEY_R] = False
-
-        # 处理G键切换网格显示
-        if window._keys.get(glfw.KEY_G):
-            show_grid = app_core.state_manager.get("show_grid", True)
-            app_core.state_manager.set("show_grid", not show_grid)
-            window._keys[glfw.KEY_G] = False
-
-        # 处理C键清空网格
-        if window._keys.get(glfw.KEY_C):
-            grid.fill(0.0)
-            window._keys[glfw.KEY_C] = False
+        # 键盘事件现在通过input模块的回调函数处理
 
     # 清理资源
     print("[示例] 清理资源...")
@@ -183,6 +204,4 @@ def main():
     print("[示例] 示例结束")
 
 if __name__ == "__main__":
-    # 导入glfw
-    import glfw
     main()

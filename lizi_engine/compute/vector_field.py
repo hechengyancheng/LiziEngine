@@ -66,8 +66,8 @@ class VectorFieldCalculator(EventHandler):
         返回 (sum_x, sum_y) 的 tuple。
         """
         # 从配置管理器读取权重参数和平均值开关
-        self_weight = self._config_manager.get("vector_self_weight", 1.0)
-        neighbor_weight = self._config_manager.get("vector_neighbor_weight", 0.1)
+        self_weight = self._config_manager.get("vector_self_weight", 0.2)
+        neighbor_weight = self._config_manager.get("vector_neighbor_weight", 0.2)
         enable_average = self._config_manager.get("enable_vector_average", False)
 
         # 如果未指定include_self，则使用配置管理器中的默认值
