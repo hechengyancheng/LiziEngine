@@ -1,54 +1,38 @@
-
 {
-  "window": {
-    "width": 1200,
-    "height": 800,
-    "title": "LiziEngine"
-  },
-  "vector_field": {
-    "grid_size": 50,
-    "default_vector_length": 10.0,
-    "vector_color": [0.2, 0.6, 1.0, 1.0],
-    "default_brush_size": 20,
+    "grid_width": 640,
+    "grid_height": 480,
+    "cell_size": 1.0,
+    "vector_color": [
+        0.2,
+        0.6,
+        1.0
+    ],
+    "vector_scale": 1.0,
     "vector_self_weight": 0.2,
     "vector_neighbor_weight": 0.2,
     "include_self": true,
     "enable_vector_average": false,
-    "reverse_vector": false,
     "enable_vector_normalization": false,
-
-    "show_centers": true,
-    "center_color": [1.0, 0.2, 0.2],
-    "center_size": 5,
-    "center_threshold": 0.5,
-    "center_min_distance": 10,
-    "auto_correct_centers": true,
-    "center_search_radius": 10
-  },
-  "rendering": {
-    "background_color": [0.1, 0.1, 0.1, 1.0],
-    "grid_color": [0.3, 0.3, 0.3, 1.0],
-    "show_grid": true,
-    "cell_size": 1,
-    "cam_x": 0,
-    "cam_y": 0,
+    "cam_x": 0.0,
+    "cam_y": 0.0,
     "cam_zoom": 1.0,
-    "update_frequency": 30.0
-  },
-  "compute": {
-    "use_opencl_compute": true,
-    "opencl_compute_threshold": 10000,
-    "compute_shader_local_size_x": 32,
-    "compute_shader_local_size_y": 32
-  },
-  "ui": {
-    "toolbar_type": "auto",
-    "enable_debug_output": false,
-    "enable_event_output": false
-  },
-  "grid": {
-    "width": 800,
-    "height": 600,
-    "cell_size": 10
-  }
+    "show_grid": true,
+    "grid_color": [
+        0.3,
+        0.3,
+        0.3
+    ],
+    "background_color": [
+        0.1,
+        0.1,
+        0.1
+    ],
+    "antialiasing": true,
+    "line_width": 1.0,
+    "enable_event_output": true,
+    "max_event_recursion_depth": 10,
+    "compute_device": "cpu",
+    "compute_iterations": 1,
+    "ui_theme": "dark",
+    "ui_scale": 1.0
 }
