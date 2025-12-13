@@ -14,7 +14,7 @@ from lizi_engine.core.container import container
 from lizi_engine.core.app import AppCore
 from lizi_engine.window.window import Window
 from lizi_engine.compute.vector_field import vector_calculator
-from examples.ui import UIManager
+from plugin.ui import UIManager
 
 class PatternType(Enum):
     """向量场模式类型"""
