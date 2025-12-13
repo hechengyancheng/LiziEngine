@@ -130,6 +130,52 @@ def main():
     input_handler.register_key_callback(KeyMap.C, MouseMap.PRESS, on_c_press)
     input_handler.register_key_callback(KeyMap.U, MouseMap.PRESS, on_u_press)
 
+    # 鼠标左键按下回调：在点击位置放置一个小的径向向量场
+    def on_mouse_left_press():
+        try:
+            # 获取鼠标屏幕坐标（窗口坐标，原点在左上）
+            mx, my = input_handler.get_mouse_position()
+
+            # 获取当前相机/视口状态
+            cam_x = app_core.state_manager.get("cam_x", 0.0)
+            cam_y = app_core.state_manager.get("cam_y", 0.0)
+            cam_zoom = app_core.state_manager.get("cam_zoom", 1.0)
+            viewport_width = app_core.state_manager.get("viewport_width", window._width)
+            viewport_height = app_core.state_manager.get("viewport_height", window._height)
+            cell_size = app_core.config_manager.get("cell_size", 1.0)
+
+            # 屏幕坐标 -> 世界坐标
+            # GLFW 鼠标坐标原点为窗口左上，y 向下为正。
+            # 推导得到的转换为：world = cam + (pixel - viewport/2) / cam_zoom
+            world_x = cam_x + (mx - (viewport_width / 2.0)) / cam_zoom
+            world_y = cam_y + (my - (viewport_height / 2.0)) / cam_zoom
+
+            # 世界坐标 -> 网格索引
+            gx = int(world_x / cell_size)
+            gy = int(world_y / cell_size)
+
+            # 边界检查并放置模式（小半径）
+            h, w = grid.shape[:2]
+            if gx < 0 or gx >= w or gy < 0 or gy >= h:
+                print(f"[示例] 点击位置超出网格: ({gx}, {gy})")
+                return
+
+            radius = 8
+            magnitude = 1.0
+
+            print(f"[示例] 在网格位置放置向量场: ({gx}, {gy}), radius={radius}, mag={magnitude}")
+
+            # 在网格中创建一个小的径向模式（会覆盖该区域）
+            vector_calculator.create_radial_pattern(grid, center=(gx, gy), radius=radius, magnitude=magnitude)
+
+            # 标记视图已改变以便渲染器更新（可选）
+            app_core.state_manager.update({"view_changed": True, "grid_updated": True})
+        except Exception as e:
+            print(f"[错误] 处理鼠标左键按下时发生异常: {e}")
+
+    # 注册鼠标左键回调
+    input_handler.register_mouse_callback(MouseMap.LEFT, MouseMap.PRESS, on_mouse_left_press)
+
     # 添加更新标志
     enable_update = True
 
