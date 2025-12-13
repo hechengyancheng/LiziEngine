@@ -63,13 +63,6 @@ class UIManager:
                 except Exception as e:
                     print(f"[错误] on_c 回调异常: {e}")
             grid.fill(0.0)
-            # 清除所有标记并同步到 state_manager
-            try:
-                self.markers.clear()
-                self.app_core.state_manager.set("markers", list(self.markers))
-            except Exception:
-                pass
-            self.app_core.state_manager.update({"grid_updated": True, "view_changed": True})
 
         def on_u_press():
             if callable(on_u):
@@ -176,7 +169,7 @@ class UIManager:
 
             window._scroll_y = 0
 
-    def update_markers(self, grid: np.ndarray, neighborhood: int = 5, move_factor: float = 0.2):
+    def update_markers(self, grid: np.ndarray, neighborhood: int = 5, move_factor: float = 0.2, clear_threshold: float = 1e-3):
         """根据周围向量平均方向移动标记以收敛到中心。
 
         算法：在每个标记的邻域内计算平均向量(mean_v)，将标记按 -mean_v * move_factor 偏移。
@@ -188,6 +181,8 @@ class UIManager:
         h, w = grid.shape[0], grid.shape[1]
 
         # 期望 grid 最后一维至少 2，代表 vx, vy
+        new_markers = []
+
         for m in self.markers:
             x = m.get("x", 0.0)
             y = m.get("y", 0.0)
@@ -203,6 +198,7 @@ class UIManager:
 
             sum_vx = 0.0
             sum_vy = 0.0
+            sum_mag = 0.0
             count = 0
 
             for yy in range(sy, ey + 1):
@@ -221,13 +217,22 @@ class UIManager:
                     # 以幅值加权平均，使明显的向量影响更大
                     sum_vx += vx * mag
                     sum_vy += vy * mag
+                    sum_mag += mag
                     count += 1
 
             if count == 0:
+                # 没有有效向量，保留标记以便后续检查
+                new_markers.append(m)
                 continue
 
             mean_vx = sum_vx / count
             mean_vy = sum_vy / count
+            avg_mag = sum_mag / count
+
+            # 如果邻域内平均幅值低于阈值，自动移除该标记
+            if avg_mag < clear_threshold:
+                # skip adding to new_markers (即删除)
+                continue
 
             # 正方向朝向可能的中心
             dx = mean_vx * move_factor
@@ -239,8 +244,10 @@ class UIManager:
 
             m["x"] = new_x
             m["y"] = new_y
+            new_markers.append(m)
 
-        # 将标记写回 state_manager 以便界面绘制或外部使用
+        # 更新内部标记列表并写回 state_manager 以便界面绘制或外部使用
+        self.markers = new_markers
         try:
             self.app_core.state_manager.set("markers", list(self.markers))
         except Exception:
