@@ -14,7 +14,7 @@ from lizi_engine.core.container import container
 from lizi_engine.core.app import AppCore
 from lizi_engine.window.window import Window
 from lizi_engine.compute.vector_field import vector_calculator
-from lizi_engine.input import input_handler, KeyMap, MouseMap
+from examples.ui import UIManager
 
 class PatternType(Enum):
     """向量场模式类型"""
@@ -86,161 +86,41 @@ def main():
     print("[示例] 按U键切换实时更新")
     print("[示例] 使用鼠标左键拖动视图，使用鼠标滚轮缩放视图")
 
-    # 初始化鼠标滚轮偏移
-    mouse_scroll_y = 0
+    # 初始化 UI 管理器并注册回调（回调包含键盘、鼠标左键、清空等行为）
+    ui_manager = UIManager(app_core, window, vector_calculator)
 
-    # 注册键盘回调函数
-    def on_space_press():
-        """空格键按下回调"""
+    # 定义空格键切换模式回调以保持原有行为
+    def _on_space():
         nonlocal current_pattern
-        # 切换到下一个模式
         current_pattern = (current_pattern + 1) % len(patterns)
         pattern_name, pattern_type = patterns[current_pattern]
         print(f"[示例] 切换到模式: {pattern_name}")
-        
-        # 创建新模式
         create_pattern(grid, pattern_type)
-        
-        # 重置视图
         app_core.view_manager.reset_view(grid.shape[1], grid.shape[0])
-    
-    def on_r_press():
-        """R键按下回调"""
-        app_core.view_manager.reset_view(grid.shape[1], grid.shape[0])
-    
-    def on_g_press():
-        """G键按下回调"""
-        show_grid = app_core.state_manager.get("show_grid", True)
-        app_core.state_manager.set("show_grid", not show_grid)
-    
-    def on_c_press():
-        """C键按下回调"""
-        grid.fill(0.0)
-    
-    def on_u_press():
-        """U键按下回调"""
-        nonlocal enable_update
-        enable_update = not enable_update
-        print(f"[示例] 实时更新已{'开启' if enable_update else '关闭'}")
-    
-    # 注册键盘回调
-    input_handler.register_key_callback(KeyMap.SPACE, MouseMap.PRESS, on_space_press)
-    input_handler.register_key_callback(KeyMap.R, MouseMap.PRESS, on_r_press)
-    input_handler.register_key_callback(KeyMap.G, MouseMap.PRESS, on_g_press)
-    input_handler.register_key_callback(KeyMap.C, MouseMap.PRESS, on_c_press)
-    input_handler.register_key_callback(KeyMap.U, MouseMap.PRESS, on_u_press)
 
-    # 鼠标左键按下回调：在点击位置放置一个小的径向向量场
-    def on_mouse_left_press():
-        try:
-            # 获取鼠标屏幕坐标（窗口坐标，原点在左上）
-            mx, my = input_handler.get_mouse_position()
-
-            # 获取当前相机/视口状态
-            cam_x = app_core.state_manager.get("cam_x", 0.0)
-            cam_y = app_core.state_manager.get("cam_y", 0.0)
-            cam_zoom = app_core.state_manager.get("cam_zoom", 1.0)
-            viewport_width = app_core.state_manager.get("viewport_width", window._width)
-            viewport_height = app_core.state_manager.get("viewport_height", window._height)
-            cell_size = app_core.config_manager.get("cell_size", 1.0)
-
-            # 屏幕坐标 -> 世界坐标
-            # GLFW 鼠标坐标原点为窗口左上，y 向下为正。
-            # 推导得到的转换为：world = cam + (pixel - viewport/2) / cam_zoom
-            world_x = cam_x + (mx - (viewport_width / 2.0)) / cam_zoom
-            world_y = cam_y + (my - (viewport_height / 2.0)) / cam_zoom
-
-            # 世界坐标 -> 网格索引
-            gx = int(world_x / cell_size)
-            gy = int(world_y / cell_size)
-
-            # 边界检查并放置模式（小半径）
-            h, w = grid.shape[:2]
-            if gx < 0 or gx >= w or gy < 0 or gy >= h:
-                print(f"[示例] 点击位置超出网格: ({gx}, {gy})")
-                return
-
-            radius = 8
-            magnitude = 1.0
-
-            print(f"[示例] 在网格位置放置向量场: ({gx}, {gy}), radius={radius}, mag={magnitude}")
-
-            # 在网格中创建一个小的径向模式（会覆盖该区域）
-            vector_calculator.create_radial_pattern(grid, center=(gx, gy), radius=radius, magnitude=magnitude)
-
-            # 标记视图已改变以便渲染器更新（可选）
-            app_core.state_manager.update({"view_changed": True, "grid_updated": True})
-        except Exception as e:
-            print(f"[错误] 处理鼠标左键按下时发生异常: {e}")
-
-    # 注册鼠标左键回调
-    input_handler.register_mouse_callback(MouseMap.LEFT, MouseMap.PRESS, on_mouse_left_press)
-
-    # 添加更新标志
-    enable_update = True
+    ui_manager.register_callbacks(grid, on_space=_on_space)
 
     while not window.should_close:
         # 更新窗口
         window.update()
 
         # 实时更新向量场
-        if enable_update:
+        if ui_manager.enable_update:
             # 使用计算模块的update_grid_with_adjacent_sum方法更新整个网格
             # 添加include_self=True参数，确保每个向量都包含自身的值
             vector_calculator.update_grid_with_adjacent_sum(grid, include_self=True)
 
         # 处理鼠标拖动
         try:
-            if window._mouse_pressed:
-                # 获取当前鼠标位置
-                x, y = window._mouse_x, window._mouse_y
-            
-                # 简化鼠标拖动处理
-            
-                # 计算鼠标移动距离
-                dx = x - window._last_mouse_x
-                dy = y - window._last_mouse_y
-
-                # 更新相机位置
-                cam_speed = 0.3
-                cam_x = app_core.state_manager.get("cam_x", 0.0) - dx * cam_speed
-                cam_y = app_core.state_manager.get("cam_y", 0.0) - dy * cam_speed  # 修复上下拖动方向
-
-                app_core.state_manager.update({
-                    "cam_x": cam_x,
-                    "cam_y": cam_y,
-                    "view_changed": True
-                })
-
-                # 更新最后鼠标位置
-                window._last_mouse_x = x
-                window._last_mouse_y = y
-            # 鼠标没有按下时的处理
+            ui_manager.process_mouse_drag()
         except Exception as e:
             print(f"[错误] 鼠标拖动处理异常: {e}")
 
-        # 处理鼠标滚轮缩放 - 使用Window类的鼠标滚轮状态
-        if hasattr(window, "_scroll_y") and window._scroll_y != 0:
-            # 更新相机缩放
-            cam_zoom = app_core.state_manager.get("cam_zoom", 1.0)
-            zoom_speed = 0.5
-            cam_zoom += window._scroll_y * zoom_speed  # 修复缩放方向
-
-            # 限制缩放范围
-            cam_zoom = max(0.1, min(10.0, cam_zoom))
-
-            app_core.state_manager.update({
-                "cam_zoom": cam_zoom,
-                "view_changed": True
-            })
-            
-            # 重置滚轮偏移，避免持续缩放
-            window._scroll_y = 0
+        # 处理鼠标滚轮缩放
+        ui_manager.process_scroll()
 
         # 渲染
         window.render(grid)
-
-        # 键盘事件现在通过input模块的回调函数处理
 
     # 清理资源
     print("[示例] 清理资源...")
