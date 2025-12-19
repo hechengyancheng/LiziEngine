@@ -14,14 +14,15 @@ class MarkerSystem:
         # 标记列表，存储浮点网格坐标 {'x':float,'y':float}
         self.markers = []
 
-    def add_marker(self, x: float, y: float) -> None:
+    def add_marker(self, x: float, y: float, mag: float = 1.0) -> None:
         """添加一个新标记
 
         Args:
             x: 标记的x坐标（浮点）
             y: 标记的y坐标（浮点）
+            mag: 标记的初始幅值（可选）
         """
-        marker = {"x": float(x), "y": float(y)}
+        marker = {"x": float(x), "y": float(y), "mag": float(mag)}
         self.markers.append(marker)
         self._sync_to_state_manager()
 
@@ -126,7 +127,8 @@ class MarkerSystem:
             new_x = max(0.0, min(w - 1.0, x + dx))
             new_y = max(0.0, min(h - 1.0, y + dy))
 
-            vector_calculator.create_radial_pattern(grid,center=(new_x,new_y), radius=2.0, magnitude=1.0)
+            # 创建径向模式
+            vector_calculator.create_radial_pattern(grid,center=(new_x,new_y), radius=2.0, magnitude=m["mag"])
 
             m["x"] = new_x
             m["y"] = new_y
