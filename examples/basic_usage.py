@@ -78,7 +78,7 @@ def main():
 
         # 实时更新向量场（如果启用）
         if ui_manager.enable_update:
-            vector_calculator.update_grid_with_adjacent_sum(grid, include_self=True)
+            vector_calculator.update_grid_with_adjacent_sum(grid)
 
         # 处理鼠标拖动与滚轮
         try:
@@ -106,3 +106,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
