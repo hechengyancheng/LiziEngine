@@ -62,19 +62,14 @@ class VectorFieldCalculator(EventHandler):
 
         return True
 
-    def sum_adjacent_vectors(self, grid: np.ndarray, x: int, y: int, include_self: bool = None) -> Tuple[float, float]:
+    def sum_adjacent_vectors(self, grid: np.ndarray, x: int, y: int) -> Tuple[float, float]:
         """
         读取目标 (x,y) 的上下左右四个相邻格子的向量并相加（越界安全）。
         返回 (sum_x, sum_y) 的 tuple。
         """
-        # 从配置管理器读取权重参数和平均值开关
+        # 从配置管理器读取权重参数
         self_weight = self._config_manager.get("vector_self_weight", 0.2)
         neighbor_weight = self._config_manager.get("vector_neighbor_weight", 0.2)
-        enable_average = self._config_manager.get("enable_vector_average", False)
-
-        # 如果未指定include_self，则使用配置管理器中的默认值
-        if include_self is None:
-            include_self = self._config_manager.get("include_self", False)
 
         if grid is None:
             return (0.0, 0.0)
@@ -86,28 +81,21 @@ class VectorFieldCalculator(EventHandler):
         calculator = self._gpu_calculator if self._current_device == "gpu" and self._gpu_calculator else self._cpu_calculator
 
         return calculator.sum_adjacent_vectors(
-            grid, x, y, include_self, 
-            self_weight, neighbor_weight, enable_average
+            grid, x, y, self_weight, neighbor_weight
         )
 
-    def update_grid_with_adjacent_sum(self, grid: np.ndarray, include_self: bool = None) -> np.ndarray:
+    def update_grid_with_adjacent_sum(self, grid: np.ndarray) -> np.ndarray:
         """
         使用NumPy的向量化操作高效计算相邻向量之和，替换原有的双重循环实现。
         返回修改后的 grid。
         """
-        # 如果未指定include_self，则使用配置管理器中的默认值
-        if include_self is None:
-            include_self = self._config_manager.get("include_self", False)
-
         if grid is None or not isinstance(grid, np.ndarray):
             return grid
 
         # 根据当前设备选择计算器
         calculator = self._gpu_calculator if self._current_device == "gpu" and self._gpu_calculator else self._cpu_calculator
 
-        return calculator.update_grid_with_adjacent_sum(
-            grid, include_self
-        )
+        return calculator.update_grid_with_adjacent_sum(grid)
 
     def create_vector_grid(self, width: int = 640, height: int = 480, default: Tuple[float, float] = (0, 0)) -> np.ndarray:
         """创建一个 height x width 的二维向量网格"""
@@ -163,13 +151,13 @@ class VectorFieldCalculator(EventHandler):
 vector_calculator = VectorFieldCalculator()
 
 # 便捷函数
-def sum_adjacent_vectors(grid: np.ndarray, x: int, y: int, include_self: bool = None) -> Tuple[float, float]:
+def sum_adjacent_vectors(grid: np.ndarray, x: int, y: int) -> Tuple[float, float]:
     """便捷函数：计算相邻向量之和"""
-    return vector_calculator.sum_adjacent_vectors(grid, x, y, include_self)
+    return vector_calculator.sum_adjacent_vectors(grid, x, y)
 
-def update_grid_with_adjacent_sum(grid: np.ndarray, include_self: bool = None) -> np.ndarray:
+def update_grid_with_adjacent_sum(grid: np.ndarray) -> np.ndarray:
     """便捷函数：更新整个网格"""
-    return vector_calculator.update_grid_with_adjacent_sum(grid, include_self)
+    return vector_calculator.update_grid_with_adjacent_sum(grid)
 
 def create_vector_grid(width: int = 640, height: int = 480, default: Tuple[float, float] = (0, 0)) -> np.ndarray:
     """便捷函数：创建向量网格"""

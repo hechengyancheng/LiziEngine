@@ -79,9 +79,7 @@ class GPUVectorFieldCalculator:
             const int x,
             const int y,
             const float self_weight,
-            const float neighbor_weight,
-            const int include_self,
-            const int enable_average
+            const float neighbor_weight
         ) {
             const int idx = get_global_id(0);
             const int idy = get_global_id(1);
@@ -91,12 +89,10 @@ class GPUVectorFieldCalculator:
             }
 
             float2 sum = (float2)(0.0f, 0.0f);
-            int count = 0;
 
             // 检查自身
-            if (include_self && x == idx && y == idy) {
+            if (x == idx && y == idy) {
                 sum += grid[idy * width + idx] * self_weight;
-                count++;
             }
 
             // 检查四个邻居
@@ -108,13 +104,7 @@ class GPUVectorFieldCalculator:
 
                 if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
                     sum += grid[ny * width + nx] * neighbor_weight;
-                    count++;
                 }
-            }
-
-            // 如果启用平均值，则除以有效向量数量
-            if (enable_average && count > 0) {
-                sum /= (float)count;
             }
 
             result[idy * width + idx] = sum;
@@ -128,10 +118,7 @@ class GPUVectorFieldCalculator:
             const int width,
             const int height,
             const float self_weight,
-            const float neighbor_weight,
-            const int include_self,
-            const int enable_average,
-            const int enable_normalization
+            const float neighbor_weight
         ) {
             const int idx = get_global_id(0);
             const int idy = get_global_id(1);
@@ -141,7 +128,6 @@ class GPUVectorFieldCalculator:
             }
 
             float2 sum = (float2)(0.0f, 0.0f);
-            int neighbor_count = 4;
 
             // 检查四个邻居
             int2 neighbors[4] = {(int2)(0, -1), (int2)(0, 1), (int2)(-1, 0), (int2)(1, 0)};
@@ -152,35 +138,11 @@ class GPUVectorFieldCalculator:
 
                 if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
                     sum += grid[ny * width + nx] * neighbor_weight;
-                } else {
-                    neighbor_count--;
                 }
             }
 
-            // 如果包含自身，添加自身贡献
-            if (include_self) {
-                sum += grid[idy * width + idx] * self_weight;
-                neighbor_count++;
-            }
-
-            // 如果需要平均值，计算有效邻居数量并归一化
-            if (enable_average) {
-                if (neighbor_count > 0) {
-                    sum /= (float)neighbor_count;
-                }
-            }
-            // 如果需要权重归一化
-            else if (enable_normalization) {
-                float weight_sum = neighbor_count * neighbor_weight;
-                if (include_self) {
-                    weight_sum += self_weight;
-                }
-
-                // 确保权重总和大于0，避免除以0
-                weight_sum = fmax(weight_sum, 0.1f);
-
-                sum /= weight_sum;
-            }
+            // 总是添加自身贡献
+            sum += grid[idy * width + idx] * self_weight;
 
             grid[idy * width + idx] = sum;
         }
@@ -288,9 +250,8 @@ class GPUVectorFieldCalculator:
             print(f"[GPU计算] OpenCL程序编译失败: {e}")
             raise
 
-    def sum_adjacent_vectors(self, grid: np.ndarray, x: int, y: int, include_self: bool = None,
-                           self_weight: float = 1.0, neighbor_weight: float = 0.1, 
-                           enable_average: bool = False) -> Tuple[float, float]:
+    def sum_adjacent_vectors(self, grid: np.ndarray, x: int, y: int,
+                           self_weight: float = 1.0, neighbor_weight: float = 0.1) -> Tuple[float, float]:
         """使用GPU计算相邻向量之和"""
         if not self._initialized:
             raise RuntimeError("GPU计算器未初始化")
@@ -310,16 +271,11 @@ class GPUVectorFieldCalculator:
         grid_buf = cl.Buffer(self._ctx, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=grid)
         result_buf = cl.Buffer(self._ctx, cl.mem_flags.WRITE_ONLY, result.nbytes)
 
-        # 设置参数
-        include_self_int = 1 if include_self else 0
-        enable_average_int = 1 if enable_average else 0
-
         # 执行内核
         self._kernels['sum_adjacent_vectors'].set_args(
             grid_buf, result_buf,
             np.int32(w), np.int32(h), np.int32(x), np.int32(y),
-            np.float32(self_weight), np.float32(neighbor_weight),
-            np.int32(include_self_int), np.int32(enable_average_int)
+            np.float32(self_weight), np.float32(neighbor_weight)
         )
         cl.enqueue_nd_range_kernel(self._queue, self._kernels['sum_adjacent_vectors'], (w, h), None)
 
@@ -329,7 +285,7 @@ class GPUVectorFieldCalculator:
         # 返回指定位置的向量
         return (result[y, x, 0], result[y, x, 1])
 
-    def update_grid_with_adjacent_sum(self, grid: np.ndarray, include_self: bool = None) -> np.ndarray:
+    def update_grid_with_adjacent_sum(self, grid: np.ndarray) -> np.ndarray:
         """使用GPU更新网格"""
         if not self._initialized:
             raise RuntimeError("GPU计算器未初始化")
@@ -342,27 +298,14 @@ class GPUVectorFieldCalculator:
         # 获取配置参数
         neighbor_weight = self._config_manager.get("vector_neighbor_weight", 0.1)
         self_weight = self._config_manager.get("vector_self_weight", 1.0)
-        enable_average = self._config_manager.get("enable_vector_average", False)
-        enable_normalization = self._config_manager.get("enable_vector_normalization", True)
-
-        # 如果未指定include_self，则使用配置管理器中的默认值
-        if include_self is None:
-            include_self = self._config_manager.get("include_self", False)
 
         # 创建OpenCL缓冲区
         grid_buf = cl.Buffer(self._ctx, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=grid)
 
-        # 设置参数
-        include_self_int = 1 if include_self else 0
-        enable_average_int = 1 if enable_average else 0
-        enable_normalization_int = 1 if enable_normalization else 0
-
         # 执行内核
         self._kernels['update_grid_with_adjacent_sum'].set_args(
             grid_buf, np.int32(w), np.int32(h),
-            np.float32(self_weight), np.float32(neighbor_weight),
-            np.int32(include_self_int), np.int32(enable_average_int),
-            np.int32(enable_normalization_int)
+            np.float32(self_weight), np.float32(neighbor_weight)
         )
         cl.enqueue_nd_range_kernel(self._queue, self._kernels['update_grid_with_adjacent_sum'], (w, h), None)
 

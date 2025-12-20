@@ -80,13 +80,17 @@ class Window(EventHandler):
             self._init_opengl()
 
             # 从容器获取渲染器
-            from ..core.container import container
-            self._renderer = container.resolve(VectorFieldRenderer)
+            try:
+                from ..core.container import container
+                self._renderer = container.resolve(VectorFieldRenderer)
 
-            # 如果容器中没有渲染器，则创建它
-            if self._renderer is None:
+                # 如果容器中没有渲染器，则创建它
+                if self._renderer is None:
+                    self._renderer = VectorFieldRenderer()
+                    container.register_singleton(VectorFieldRenderer, self._renderer)
+            except Exception as e:
+                print(f"[窗口] 获取渲染器失败，创建新实例: {e}")
                 self._renderer = VectorFieldRenderer()
-                container.register_singleton(VectorFieldRenderer, self._renderer)
 
             # 注册事件处理器
             self._register_event_handlers()
@@ -95,7 +99,19 @@ class Window(EventHandler):
             return True
         except Exception as e:
             print(f"[窗口] 初始化失败: {e}")
+            # 清理已初始化的资源
+            self._cleanup_on_failure()
             return False
+
+    def _cleanup_on_failure(self) -> None:
+        """在初始化失败时清理资源"""
+        try:
+            if self._window:
+                glfw.destroy_window(self._window)
+                self._window = None
+            glfw.terminate()
+        except Exception as e:
+            print(f"[窗口] 清理失败资源时出错: {e}")
 
     def _init_opengl(self) -> None:
         """初始化OpenGL"""

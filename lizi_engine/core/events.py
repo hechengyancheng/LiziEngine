@@ -91,15 +91,11 @@ class AsyncEventHandler(EventHandler):
     def handle(self, event: Event) -> None:
         """同步处理事件，默认实现为调用异步版本"""
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # 如果事件循环正在运行，创建任务但不等待
-                asyncio.create_task(self.handle_async(event))
-            else:
-                # 如果事件循环未运行，直接运行
-                loop.run_until_complete(self.handle_async(event))
-        except Exception:
-            # 如果没有事件循环，创建新的事件循环
+            loop = asyncio.get_running_loop()
+            # 如果事件循环正在运行，创建任务但不等待
+            loop.create_task(self.handle_async(event))
+        except RuntimeError:
+            # 如果没有运行中的事件循环，使用 asyncio.run
             asyncio.run(self.handle_async(event))
 
 class EventFilter:

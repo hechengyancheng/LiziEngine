@@ -412,6 +412,22 @@ class VectorFieldRenderer(EventHandler):
         glBindBuffer(GL_ARRAY_BUFFER, 0)
         glUseProgram(0)
 
+    def _is_opengl_context_valid(self) -> bool:
+        """检查OpenGL上下文是否有效"""
+        try:
+            glGetString(GL_VERSION)
+            return True
+        except:
+            return False
+
+    def _safe_delete_buffer(self, buffer_id: Optional[int], delete_func) -> None:
+        """安全删除OpenGL缓冲对象"""
+        if buffer_id is not None and self._is_opengl_context_valid():
+            try:
+                delete_func(1, [buffer_id])
+            except Exception as e:
+                print(f"[渲染器] 删除缓冲对象失败: {e}")
+
     def cleanup(self) -> None:
         """清理渲染器资源"""
         if not self._initialized:
@@ -421,53 +437,17 @@ class VectorFieldRenderer(EventHandler):
             # 删除着色器程序
             self._shader_program.cleanup()
 
-            # 检查 OpenGL 上下文是否存在
-            gl_context_exists = callable(glGetString) and callable(glDeleteVertexArrays) and callable(glDeleteBuffers)
-            
             # 删除VAO和VBO
-            if self._vao is not None:
-                if gl_context_exists:
-                    try:
-                        # 尝试获取 OpenGL 版本，如果成功则说明上下文存在
-                        glGetString(GL_VERSION)
-                        glDeleteVertexArrays(1, [self._vao])
-                    except:
-                        # 如果 OpenGL 上下文不存在，忽略错误
-                        pass
-                self._vao = None
+            self._safe_delete_buffer(self._vao, glDeleteVertexArrays)
+            self._safe_delete_buffer(self._vbo, glDeleteBuffers)
+            self._safe_delete_buffer(self._grid_vao, glDeleteVertexArrays)
+            self._safe_delete_buffer(self._grid_vbo, glDeleteBuffers)
 
-            if self._vbo is not None:
-                if gl_context_exists:
-                    try:
-                        # 尝试获取 OpenGL 版本，如果成功则说明上下文存在
-                        glGetString(GL_VERSION)
-                        glDeleteBuffers(1, [self._vbo])
-                    except:
-                        # 如果 OpenGL 上下文不存在，忽略错误
-                        pass
-                self._vbo = None
-
-            if self._grid_vao is not None:
-                if gl_context_exists:
-                    try:
-                        # 尝试获取 OpenGL 版本，如果成功则说明上下文存在
-                        glGetString(GL_VERSION)
-                        glDeleteVertexArrays(1, [self._grid_vao])
-                    except:
-                        # 如果 OpenGL 上下文不存在，忽略错误
-                        pass
-                self._grid_vao = None
-
-            if self._grid_vbo is not None:
-                if gl_context_exists:
-                    try:
-                        # 尝试获取 OpenGL 版本，如果成功则说明上下文存在
-                        glGetString(GL_VERSION)
-                        glDeleteBuffers(1, [self._grid_vbo])
-                    except:
-                        # 如果 OpenGL 上下文不存在，忽略错误
-                        pass
-                self._grid_vbo = None
+            # 清理引用
+            self._vao = None
+            self._vbo = None
+            self._grid_vao = None
+            self._grid_vbo = None
 
             self._initialized = False
             print("[渲染器] 资源清理完成")

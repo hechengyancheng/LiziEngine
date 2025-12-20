@@ -166,7 +166,7 @@ class GridManager(EventHandler):
 
 class ViewManager(EventHandler):
     """视图管理器"""
-    def __init__(self, state_manager: StateManager, event_bus: Event):
+    def __init__(self, state_manager: StateManager, event_bus: EventBus):
         self._state_manager = state_manager
         self._event_bus = event_bus
 

@@ -60,9 +60,6 @@ class ConfigManager:
         self.register_option("vector_scale", 1.0, "向量缩放", type="number", min_value=0.1, max_value=10.0)
         self.register_option("vector_self_weight", 0.2, "向量自身权重", type="number", min_value=0.0, max_value=10.0)
         self.register_option("vector_neighbor_weight", 0.2, "向量邻居权重", type="number", min_value=0.0, max_value=10.0)
-        self.register_option("include_self", True, "是否包含自身向量", type="boolean")
-        self.register_option("enable_vector_average", False, "是否启用向量平均值", type="boolean")
-        self.register_option("enable_vector_normalization", False, "是否启用向量归一化", type="boolean")
 
         # 视图配置
         self.register_option("cam_x", 0.0, "相机X坐标", type="number")
@@ -195,9 +192,13 @@ class ConfigManager:
         """
         nested: Dict[str, Any] = {}
         for flat_key, value in flat.items():
-            parts = flat_key.split('_') if flat_key else [flat_key]
+            if not flat_key:
+                continue  # 跳过空键
+            parts = flat_key.split('_')
             cur = nested
             for i, part in enumerate(parts):
+                if not part:
+                    continue  # 跳过空的部分
                 if i == len(parts) - 1:
                     cur[part] = value
                 else:
