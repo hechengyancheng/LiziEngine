@@ -149,6 +149,53 @@ class MarkerSystem:
             except Exception:
                 pass
 
+    def add_vector_at_position(self, grid: np.ndarray, x: float, y: float, vx: float, vy: float) -> None:
+        """在浮点坐标处添加向量，使用双线性插值的逆方法，将向量分布到四个最近的整数坐标
+
+        Args:
+            grid: 向量场网格
+            x: 浮点x坐标
+            y: 浮点y坐标
+            vx: 向量x分量
+            vy: 向量y分量
+        """
+        if not hasattr(grid, "ndim") or grid.ndim < 3 or grid.shape[2] < 2:
+            return
+
+        h, w = grid.shape[0], grid.shape[1]
+
+        # 确保坐标在有效范围内
+        x = max(0.0, min(w - 1.0, float(x)))
+        y = max(0.0, min(h - 1.0, float(y)))
+
+        # 计算四个最近的整数坐标
+        x0 = int(np.floor(x))
+        x1 = min(x0 + 1, w - 1)
+        y0 = int(np.floor(y))
+        y1 = min(y0 + 1, h - 1)
+
+        # 计算插值权重
+        wx = x - x0
+        wy = y - y0
+
+        # 双线性插值的逆：将向量按权重分布到四个角
+        w00 = (1 - wx) * (1 - wy)
+        w01 = wx * (1 - wy)
+        w10 = (1 - wx) * wy
+        w11 = wx * wy
+
+        try:
+            grid[y0, x0, 0] += w00 * vx
+            grid[y0, x0, 1] += w00 * vy
+            grid[y0, x1, 0] += w01 * vx
+            grid[y0, x1, 1] += w01 * vy
+            grid[y1, x0, 0] += w10 * vx
+            grid[y1, x0, 1] += w10 * vy
+            grid[y1, x1, 0] += w11 * vx
+            grid[y1, x1, 1] += w11 * vy
+        except Exception:
+            pass
+
     def fit_vector_at_position(self, grid: np.ndarray, x: float, y: float) -> Tuple[float, float]:
         """在浮点坐标处拟合向量值，使用双线性插值
 
