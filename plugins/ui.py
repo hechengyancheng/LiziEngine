@@ -69,6 +69,8 @@ class UIManager:
                 except Exception as e:
                     print(f"[错误] on_c 回调异常: {e}")
             self.controller.clear_grid()
+            # 清除所有标记
+            self.marker_system.clear_markers()
 
         def on_v_press():
             if callable(on_v):
@@ -116,6 +118,11 @@ class UIManager:
         def on_mouse_left_release():
             # 清除左键按下标志和选定的标记
             self._mouse_left_pressed = False
+            if self._selected_marker is not None:
+                # 清除拖拽标志并重置速度
+                self._selected_marker.pop("dragged", None)
+                self._selected_marker["vx"] = 0.0
+                self._selected_marker["vy"] = 0.0
             self._selected_marker = None
 
         input_handler.register_mouse_callback(MouseMap.LEFT, MouseMap.RELEASE, on_mouse_left_release)
@@ -190,7 +197,7 @@ class UIManager:
 
             window._scroll_y = 0
 
-    def update_markers(self, grid: np.ndarray, neighborhood: int = 2, move_factor: float = 1.0, clear_threshold: float = 1e-3):
+    def update_markers(self, grid: np.ndarray, move_factor: float = 0.2, clear_threshold: float = 1e-3):
         """使用标记系统更新标记位置
 
         Args:
@@ -199,4 +206,4 @@ class UIManager:
             move_factor: 移动因子
             clear_threshold: 清除阈值，低于此平均幅值的标记将被清除
         """
-        self.marker_system.update_markers(grid, neighborhood, move_factor, clear_threshold)
+        self.marker_system.update_markers(grid, move_factor, clear_threshold)

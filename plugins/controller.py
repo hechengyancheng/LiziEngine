@@ -117,22 +117,7 @@ class Controller:
                 print("[示例] 未找到最近的标记")
                 return None
 
-            # 计算从标记到鼠标位置的方向向量
-            vx = gx - closest_marker["x"]
-            vy = gy - closest_marker["y"]
-
-            # 归一化向量
-            vec_len = (vx ** 2 + vy ** 2) ** 0.5
-            if vec_len > 0:
-                vx /= vec_len
-                vy /= vec_len
-
-            # 使用微小向量创建函数
-            self.marker_system.create_tiny_vector(self.grid, closest_marker["x"], closest_marker["y"], vx=vx, vy=vy)
-
-            print(f"[示例] 在标记位置({closest_marker['x']:.2f}, {closest_marker['y']:.2f})添加向量({vx:.2f}, {vy:.2f})")
-
-            self.app_core.state_manager.update({"view_changed": True, "grid_updated": True})
+            print(f"[示例] 选中标记位置({closest_marker['x']:.2f}, {closest_marker['y']:.2f})")
 
             return closest_marker
         except Exception as e:
@@ -160,12 +145,10 @@ class Controller:
 
             h, w = self.grid.shape[:2]
             if gx >= 0 and gx < w and gy >= 0 and gy < h:
-                # 计算从标记到鼠标位置的方向向量
-                vx = gx - selected_marker["x"]
-                vy = gy - selected_marker["y"]
-
-                # 使用微小向量创建函数
-                self.marker_system.create_tiny_vector(self.grid, x=selected_marker["x"], y=selected_marker["y"], vx=vx, vy=vy)
+                # 设置标记位置到鼠标位置
+                selected_marker["x"] = float(gx)
+                selected_marker["y"] = float(gy)
+                selected_marker["dragged"] = True
 
                 self.app_core.state_manager.update({"view_changed": True, "grid_updated": True})
         except Exception as e:
