@@ -118,6 +118,11 @@ class UIManager:
         def on_mouse_left_release():
             # 清除左键按下标志和选定的标记
             self._mouse_left_pressed = False
+            if self._selected_marker is not None:
+                # 清除拖拽标志并重置速度
+                self._selected_marker.pop("dragged", None)
+                self._selected_marker["vx"] = 0.0
+                self._selected_marker["vy"] = 0.0
             self._selected_marker = None
 
         input_handler.register_mouse_callback(MouseMap.LEFT, MouseMap.RELEASE, on_mouse_left_release)

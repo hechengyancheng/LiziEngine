@@ -98,7 +98,7 @@ class MarkerSystem:
                 new_y = max(0.0, min(h - 1.0, y + m["vy"]))
 
                 # 创建微小向量影响，使用标记的速度
-                self.create_tiny_vector(grid, new_x, new_y, m["mag"], m["vx"], m["vy"])
+                self.create_tiny_vector(grid, new_x, new_y, m["mag"])
 
                 m["x"] = new_x
                 m["y"] = new_y
@@ -115,7 +115,7 @@ class MarkerSystem:
         self.markers = new_markers
         self._sync_to_state_manager()
 
-    def create_tiny_vector(self, grid: np.ndarray, x: float, y: float, mag: float = 1.0, vx: float = 0.0, vy: float = 0.0) -> None:
+    def create_tiny_vector(self, grid: np.ndarray, x: float, y: float, mag: float = 1.0) -> None:
         # 在指定位置创建一个微小的向量场影响,只影响位置本身及上下左右四个邻居
         if not hasattr(grid, "ndim"):
             return
@@ -131,8 +131,6 @@ class MarkerSystem:
             for dx in [-1, 0, 1]:
                 if abs(dx) + abs(dy) == 1:  # 上下左右邻居
                     self.add_vector_at_position(grid, x + dx, y + dy, dx * mag, dy * mag)
-        #当前位置的向量值为vx,vy
-        self.add_vector_at_position(grid, x, y, vx * mag, vy * mag)
 
     def add_vector_at_position(self, grid: np.ndarray, x: float, y: float, vx: float, vy: float) -> None:
         """在浮点坐标处添加向量，使用双线性插值的逆方法，将向量分布到四个最近的整数坐标
