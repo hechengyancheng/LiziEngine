@@ -148,41 +148,6 @@ python examples/input_demo.py
 - **marker_system.py**: 标记系统，支持在向量场上添加标记点
 - **ui.py**: UI 管理器，处理界面交互和事件分发
 
-## 开发指南
-
-### 扩展计算功能
-
-```python
-from lizi_engine.compute.vector_field import VectorFieldCalculator
-
-class CustomCalculator(VectorFieldCalculator):
-    def create_custom_pattern(self, grid, params):
-        # 实现自定义向量场模式
-        pass
-
-# 注册自定义计算器
-custom_calc = CustomCalculator()
-# 在应用中集成
-```
-
-### 添加新插件
-
-```python
-from plugins.base_plugin import BasePlugin
-
-class MyPlugin(BasePlugin):
-    def initialize(self):
-        # 初始化逻辑
-        pass
-
-    def update(self, delta_time):
-        # 更新逻辑
-        pass
-
-# 注册插件
-app_core.plugin_manager.register_plugin(MyPlugin())
-```
-
 ## 配置说明
 
 `config.json` 中的主要配置项：
@@ -246,23 +211,12 @@ app_core.plugin_manager.register_plugin(MyPlugin())
 }
 ```
 
-## 性能优化建议
-
-1. **GPU 加速**: 大规模计算时优先使用 GPU
-2. **参数调优**: 根据应用场景调整权重参数
-3. **内存管理**: 及时清理不再使用的网格数据
-4. **渲染优化**: 合理设置窗口大小和刷新率
-
 ## 许可证
 
 MIT License
 
-## 贡献
-
-欢迎提交 Issue 和 Pull Request 来改进 LiziEngine！
-
 ## 联系方式
 
-如有问题或建议，请通过 GitHub Issues 联系项目维护者。
+2273902027@qq.com
 
 
