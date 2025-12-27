@@ -21,6 +21,8 @@ LiziEngine 是一个由向量场驱动的物理引擎，旨在从根本上解决
 
 向量场是一个二维网格数据结构，每个网格点包含一个二维向量 `(vx, vy)`，表示该点的方向和强度。向量场的计算涉及相邻点的相互影响，形成复杂的动态模式。
 
+本项目坚持“大道至简”的原则，核心计算逻辑只有两个：迭代向量场与平滑向量值
+
 ### 计算方法
 
 #### 1. 相邻向量求和
@@ -59,14 +61,14 @@ add_vector_at_position(grid, x, y, vx, vy)
 ### 支持的向量场模式
 
 #### 径向模式 (Radial Pattern)
-向量从中心向外辐射，形成扩散效果：
+向量从中心向外辐射，形成扩散效果（仅用于测试，只支持整数坐标）：
 
 ```python
 create_radial_pattern(self, grid, center, radius, magnitude)
 ```
 
 #### 切线模式 (Tangential Pattern)
-向量围绕中心旋转，形成漩涡效果：
+向量围绕中心旋转，形成漩涡效果（仅用于测试，只支持整数坐标）：
 
 ```python
 create_tangential_pattern(self, grid, center, radius, magnitude)
