@@ -101,6 +101,12 @@ add_vector_at_position(grid, x, y, vx, vy)
 
 ### 支持的向量场模式
 
+#### 微小向量添加
+在指定位置创建局部影响，只影响当前位置及其上下左右邻居：
+
+```python
+create_tiny_vector(self, grid, x, y, mag)
+```
 #### 径向模式 (Radial Pattern)
 向量从中心向外辐射，形成扩散效果（仅用于测试，只支持整数坐标）：
 
@@ -113,13 +119,6 @@ create_radial_pattern(self, grid, center, radius, magnitude)
 
 ```python
 create_tangential_pattern(self, grid, center, radius, magnitude)
-```
-
-#### 微小向量添加
-在指定位置创建局部影响，只影响当前位置及其上下左右邻居：
-
-```python
-create_tiny_vector(self, grid, x, y, mag)
 ```
 
 ### CPU vs GPU 计算
