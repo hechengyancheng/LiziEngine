@@ -128,25 +128,13 @@ create_tangential_pattern(self, grid, center, radius, magnitude)
 
 ## 架构设计
 
-### 核心模块 (core/)
+### 底层引擎 (lizi_engine/)
 
-- **container.py**: 依赖注入容器，避免单例模式，管理组件生命周期
-- **events.py**: 事件系统，支持发布-订阅模式和异步处理
-- **state.py**: 状态管理，提供统一的状态管理和变更通知
-- **config.py**: 配置管理，支持文件加载和运行时热更新
-- **app.py**: 应用核心，整合所有管理器
-
-### 计算模块 (compute/)
-
-- **vector_field.py**: 向量场计算器主接口，统一 CPU/GPU 计算
-- **cpu_vector_field.py**: CPU 计算实现，使用 NumPy 向量化
-- **gpu_vector_field.py**: GPU 计算实现，基于 OpenCL
-
-### 图形和窗口模块
-
-- **graphics/renderer.py**: OpenGL 渲染器，向量场可视化
-- **window/window.py**: 窗口管理，OpenGL 窗口创建和事件处理
-- **input/**: 输入处理模块，支持键盘、鼠标事件
+- **core**: 核心模块
+- **compute**: 计算模块，由主接口统一cpu与gpu计算方式
+- **graphics**: 渲染器模块
+- **window**: 窗口管理器模块
+- **input**: 输入管理器模块
 
 ### 插件系统 (plugins/)
 
