@@ -89,21 +89,20 @@ class InputHandler(EventHandler):
         """处理键盘事件
 
         Args:
-            window: GLFW窗口 (may be None for Dear PyGui)
+            window: GLFW窗口
             key: 按键代码
             scancode: 扫描码
             action: 动作 (PRESS, RELEASE, REPEAT)
             mods: 修饰键
         """
         # 更新按键状态
-        # Use numeric constants instead of GLFW constants to avoid GLFW dependency
-        if action == 1:  # PRESS
+        if action == glfw.PRESS:
             self._key_states[key] = True
-        elif action == 0:  # RELEASE
+        elif action == glfw.RELEASE:
             self._key_states[key] = False
 
         # 触发按键事件
-        event_type = EventType.KEY_PRESSED if action == 1 else EventType.KEY_RELEASED
+        event_type = EventType.KEY_PRESSED if action == glfw.PRESS else EventType.KEY_RELEASED
         event = Event(
             type=event_type,
             data={
@@ -124,28 +123,19 @@ class InputHandler(EventHandler):
         """处理鼠标按钮事件
 
         Args:
-            window: GLFW窗口 (may be None for Dear PyGui)
+            window: GLFW窗口
             button: 鼠标按钮
             action: 动作 (PRESS, RELEASE)
             mods: 修饰键
         """
         # 更新鼠标按钮状态
-        # Use numeric constants instead of GLFW constants to avoid GLFW dependency
-        if action == 1:  # PRESS
+        if action == glfw.PRESS:
             self._mouse_buttons[button] = True
-        elif action == 0:  # RELEASE
+        elif action == glfw.RELEASE:
             self._mouse_buttons[button] = False
 
-        # 获取当前鼠标位置 - handle both GLFW and Dear PyGui cases
-        if window is not None:
-            try:
-                x, y = glfw.get_cursor_pos(window)
-            except:
-                # Fallback if GLFW not available
-                x, y = self._mouse_position
-        else:
-            # Use stored position for Dear PyGui
-            x, y = self._mouse_position
+        # 获取当前鼠标位置
+        x, y = glfw.get_cursor_pos(window)
 
         # 触发鼠标点击事件
         event = Event(

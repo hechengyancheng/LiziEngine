@@ -1,26 +1,26 @@
 """
 鼠标映射 - 定义鼠标按钮的映射
 """
-# Use GLFW mouse button codes as they are compatible with Dear PyGui
+import glfw
 
 
 class MouseMap:
     """鼠标映射类，提供鼠标按钮的常量定义"""
 
     # 鼠标按钮
-    LEFT = 0  # GLFW.MOUSE_BUTTON_LEFT
-    RIGHT = 1  # GLFW.MOUSE_BUTTON_RIGHT
-    MIDDLE = 2  # GLFW.MOUSE_BUTTON_MIDDLE
-    _4 = 3  # GLFW.MOUSE_BUTTON_4
-    _5 = 4  # GLFW.MOUSE_BUTTON_5
-    _6 = 5  # No direct equivalent, using numeric value
-    _7 = 6  # No direct equivalent, using numeric value
-    _8 = 7  # No direct equivalent, using numeric value
+    LEFT = glfw.MOUSE_BUTTON_LEFT
+    RIGHT = glfw.MOUSE_BUTTON_RIGHT
+    MIDDLE = glfw.MOUSE_BUTTON_MIDDLE
+    _4 = glfw.MOUSE_BUTTON_4
+    _5 = glfw.MOUSE_BUTTON_5
+    _6 = glfw.MOUSE_BUTTON_6
+    _7 = glfw.MOUSE_BUTTON_7
+    _8 = glfw.MOUSE_BUTTON_8
 
     # 动作
-    PRESS = 1  # GLFW.PRESS
-    RELEASE = 0  # GLFW.RELEASE
-    REPEAT = 2  # GLFW.REPEAT
+    PRESS = glfw.PRESS
+    RELEASE = glfw.RELEASE
+    REPEAT = glfw.REPEAT
 
     @staticmethod
     def get_button_name(button: int) -> str:
