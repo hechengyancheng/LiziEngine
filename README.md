@@ -82,14 +82,6 @@ python examples/patterns.py
 python examples/input_demo.py
 ```
 
-### 测试
-
-目前项目处于alpha阶段，测试覆盖有限。如需运行现有测试：
-
-```bash
-python -m pytest tests/  
-```
-
 ### 键盘控制
 
 - **空格键**: 重新生成切线模式
@@ -296,8 +288,6 @@ A: 目前主要在 Windows 上测试，其他操作系统可能需要调整依�
 git clone https://github.com/your-repo/LiziEngine.git
 cd LiziEngine
 pip install -r requirements.txt
-# 运行测试 
-python -m pytest tests/ 
 ```
 
 ### 代码规范
@@ -310,6 +300,7 @@ python -m pytest tests/
 
 详细的API文档请参考 `doc/` 目录下的文档：
 - [READEME.md](doc/README.md)
+
 
 
 
