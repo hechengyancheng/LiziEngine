@@ -70,6 +70,10 @@ class GUIManager(EventHandler):
             # 设置Dear PyGui主题
             self._setup_theme()
 
+            # 创建纹理注册表
+            with dpg.texture_registry() as self._texture_registry:
+                pass
+
             # 创建主界面
             self._create_main_interface()
 
@@ -204,16 +208,15 @@ class GUIManager(EventHandler):
             return
 
         # 在渲染面板中添加OpenGL图像
-        with dpg.parent(parent=self._render_panel):
-            # 移除占位符文本
-            dpg.delete_item(dpg.last_item())
+        # 移除占位符文本
+        dpg.delete_item(dpg.last_item())
 
-            # 添加OpenGL渲染图像
-            dpg_image = self._opengl_embedder.get_dpg_image()
-            if dpg_image:
-                # 设置图像位置和大小
-                dpg.set_item_pos(dpg_image, (10, 10))
-                # 这里可以根据需要调整图像大小
+        # 添加OpenGL渲染图像
+        dpg_image = self._opengl_embedder.get_dpg_image(parent=self._render_panel)
+        if dpg_image:
+            # 设置图像位置和大小
+            dpg.set_item_pos(dpg_image, (10, 10))
+            # 这里可以根据需要调整图像大小
 
     def _reset_view_callback(self):
         """重置视图回调"""
@@ -367,6 +370,10 @@ class GUIManager(EventHandler):
     def render(self) -> None:
         """渲染GUI内容"""
         if not self._initialized or not self._renderer or self._grid is None or not self._opengl_embedder:
+            return
+
+        # 检查OpenGL嵌入器是否已初始化
+        if not hasattr(self._opengl_embedder, '_initialized') or not self._opengl_embedder._initialized:
             return
 
         # 开始OpenGL渲染到帧缓冲

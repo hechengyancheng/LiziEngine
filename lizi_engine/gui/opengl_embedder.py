@@ -117,22 +117,24 @@ class OpenGLEmbedder:
     def _create_dpg_texture(self):
         """创建Dear PyGui纹理"""
         # 创建空的纹理数据
-        texture_data = np.zeros((self._height, self._width, 3), dtype=np.uint8)
-        texture_data[:, :, :] = [25, 25, 25]  # 深灰色背景
+        texture_data = np.zeros((self._height, self._width, 3), dtype=np.float32)
+        texture_data[:, :, :] = [0.1, 0.1, 0.1]  # 深灰色背景，归一化到0-1范围
 
         # 添加纹理到Dear PyGui
-        with dpg.texture_registry():
-            self._dpg_texture = dpg.add_raw_texture(
-                width=self._width,
-                height=self._height,
-                default_value=texture_data.flatten(),
-                format=dpg.mvFormat_FloatRgb
-            )
+        self._dpg_texture = dpg.add_raw_texture(
+            width=self._width,
+            height=self._height,
+            default_value=texture_data.flatten(),
+            format=dpg.mvFormat_Float_rgb
+        )
 
     def begin_render(self):
         """开始渲染到帧缓冲"""
         if not self._initialized:
             return
+
+        # 确保OpenGL上下文当前
+        glfw.make_context_current(self._glfw_window)
 
         # 绑定帧缓冲
         glBindFramebuffer(GL_FRAMEBUFFER, self._fbo)
@@ -174,10 +176,10 @@ class OpenGLEmbedder:
         """获取Dear PyGui纹理ID"""
         return self._dpg_texture
 
-    def get_dpg_image(self) -> Optional[int]:
+    def get_dpg_image(self, parent: Optional[int] = None) -> Optional[int]:
         """获取或创建Dear PyGui图像"""
         if self._dpg_image is None and self._dpg_texture is not None:
-            self._dpg_image = dpg.add_image(self._dpg_texture, width=self._width, height=self._height)
+            self._dpg_image = dpg.add_image(self._dpg_texture, width=self._width, height=self._height, parent=parent)
         return self._dpg_image
 
     def resize(self, width: int, height: int):
