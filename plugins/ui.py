@@ -81,6 +81,17 @@ class UIManager:
                     print(f"[错误] on_v 回调异常: {e}")
             self.controller.switch_vector_field_direction()
 
+        def on_u_press():
+            if callable(on_u):
+                try:
+                    on_u()
+                    return
+                except Exception as e:
+                    print(f"[错误] on_u 回调异常: {e}")
+            # 切换实时更新
+            self.enable_update = not self.enable_update
+            print(f"[UI] 实时更新: {'启用' if self.enable_update else '禁用'}")
+
         def on_f_press():
             if callable(on_f):
                 try:
@@ -109,6 +120,7 @@ class UIManager:
         input_handler.register_key_callback(KeyMap.R, MouseMap.PRESS, on_r_press)
         input_handler.register_key_callback(KeyMap.G, MouseMap.PRESS, on_g_press)
         input_handler.register_key_callback(KeyMap.C, MouseMap.PRESS, on_c_press)
+        input_handler.register_key_callback(KeyMap.U, MouseMap.PRESS, on_u_press)
         input_handler.register_key_callback(KeyMap.V, MouseMap.PRESS, on_v_press)
         input_handler.register_key_callback(KeyMap.F, MouseMap.PRESS, on_f_press)
 

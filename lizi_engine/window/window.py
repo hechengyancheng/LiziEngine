@@ -1,10 +1,9 @@
 """
 窗口管理模块 - 提供窗口管理功能
-支持OpenGL窗口创建和事件处理
+支持Dear PyGui窗口创建和事件处理
 """
-import glfw
+import dearpygui.dearpygui as dpg
 import numpy as np
-from OpenGL.GL import *
 from typing import Optional, Callable, Dict, Any, Tuple
 from ..core.config import config_manager
 from ..core.events import Event, EventType, event_bus, EventHandler, FunctionEventHandler
@@ -47,37 +46,31 @@ class Window(EventHandler):
     def initialize(self) -> bool:
         """初始化窗口"""
         try:
-            # 初始化GLFW
-            if not glfw.init():
-                print("[窗口] GLFW初始化失败")
-                return False
+            # 初始化Dear PyGui
+            dpg.create_context()
+            dpg.create_viewport(title=self._title, width=self._width, height=self._height)
+            dpg.setup_dearpygui()
 
-            # 配置GLFW
-            glfw.window_hint(glfw.RESIZABLE, glfw.TRUE)
-            glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
-            glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
-            glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
+            # 创建主窗口
+            with dpg.window(label=self._title, width=self._width, height=self._height, no_title_bar=True) as self._window:
+                # 创建绘图区域
+                with dpg.drawlist(width=self._width, height=self._height) as self._drawlist:
+                    pass
 
-            # 创建窗口
-            self._window = glfw.create_window(self._width, self._height, self._title, None, None)
+            # 设置视口回调
+            dpg.set_viewport_resize_callback(self._viewport_resize_callback)
 
-            if not self._window:
-                print("[窗口] 窗口创建失败")
-                glfw.terminate()
-                return False
+            # 设置键盘回调
+            with dpg.handler_registry():
+                dpg.add_key_press_handler(callback=self._key_press_callback)
+                dpg.add_key_release_handler(callback=self._key_release_callback)
+                dpg.add_mouse_click_handler(callback=self._mouse_click_callback)
+                dpg.add_mouse_release_handler(callback=self._mouse_release_callback)
+                dpg.add_mouse_move_handler(callback=self._mouse_move_callback)
+                dpg.add_mouse_wheel_handler(callback=self._mouse_wheel_callback)
 
-            # 设置窗口上下文
-            glfw.make_context_current(self._window)
-
-            # 设置窗口回调
-            glfw.set_framebuffer_size_callback(self._window, self._framebuffer_size_callback)
-            glfw.set_key_callback(self._window, self._key_callback)
-            glfw.set_mouse_button_callback(self._window, self._mouse_button_callback)
-            glfw.set_cursor_pos_callback(self._window, self._cursor_pos_callback)
-            glfw.set_scroll_callback(self._window, self._scroll_callback)
-
-            # 初始化OpenGL
-            self._init_opengl()
+            # 显示视口
+            dpg.show_viewport()
 
             # 从容器获取渲染器
             try:
@@ -91,6 +84,10 @@ class Window(EventHandler):
             except Exception as e:
                 print(f"[窗口] 获取渲染器失败，创建新实例: {e}")
                 self._renderer = VectorFieldRenderer()
+
+            # 设置渲染器的绘图列表
+            if self._renderer:
+                self._renderer.set_drawlist(self._drawlist)
 
             # 注册事件处理器
             self._register_event_handlers()
@@ -106,63 +103,55 @@ class Window(EventHandler):
     def _cleanup_on_failure(self) -> None:
         """在初始化失败时清理资源"""
         try:
-            if self._window:
-                glfw.destroy_window(self._window)
-                self._window = None
-            glfw.terminate()
+            dpg.destroy_context()
         except Exception as e:
             print(f"[窗口] 清理失败资源时出错: {e}")
-
-    def _init_opengl(self) -> None:
-        """初始化OpenGL"""
-        # 启用深度测试
-        glEnable(GL_DEPTH_TEST)
-
-        # 设置视口
-        glViewport(0, 0, self._width, self._height)
-
-        # 设置清除颜色
-        glClearColor(0.1, 0.1, 0.1, 1.0)
-
-        # 启用抗锯齿
-        if self._config_manager.get("antialiasing", True):
-            glEnable(GL_LINE_SMOOTH)
-            glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
 
     def _register_event_handlers(self) -> None:
         """注册事件处理器"""
         # 鼠标点击事件
-        self._event_handlers[EventType.MOUSE_CLICKED] = FunctionEventHandler(
+        mouse_click_handler = FunctionEventHandler(
             self._handle_mouse_click, "WindowMouseClickHandler"
         )
+        self._event_handlers[EventType.MOUSE_CLICKED] = mouse_click_handler
+        self._event_bus.subscribe(EventType.MOUSE_CLICKED, mouse_click_handler)
 
         # 鼠标移动事件
-        self._event_handlers[EventType.MOUSE_MOVED] = FunctionEventHandler(
+        mouse_move_handler = FunctionEventHandler(
             self._handle_mouse_move, "WindowMouseMoveHandler"
         )
+        self._event_handlers[EventType.MOUSE_MOVED] = mouse_move_handler
+        self._event_bus.subscribe(EventType.MOUSE_MOVED, mouse_move_handler)
 
         # 鼠标滚轮事件
-        self._event_handlers[EventType.MOUSE_SCROLLED] = FunctionEventHandler(
+        mouse_scroll_handler = FunctionEventHandler(
             self._handle_mouse_scroll, "WindowMouseScrollHandler"
         )
+        self._event_handlers[EventType.MOUSE_SCROLLED] = mouse_scroll_handler
+        self._event_bus.subscribe(EventType.MOUSE_SCROLLED, mouse_scroll_handler)
 
         # 键盘按下事件
-        self._event_handlers[EventType.KEY_PRESSED] = FunctionEventHandler(
+        key_press_handler = FunctionEventHandler(
             self._handle_key_press, "WindowKeyPressHandler"
         )
+        self._event_handlers[EventType.KEY_PRESSED] = key_press_handler
+        self._event_bus.subscribe(EventType.KEY_PRESSED, key_press_handler)
 
         # 键盘释放事件
-        self._event_handlers[EventType.KEY_RELEASED] = FunctionEventHandler(
+        key_release_handler = FunctionEventHandler(
             self._handle_key_release, "WindowKeyReleaseHandler"
         )
+        self._event_handlers[EventType.KEY_RELEASED] = key_release_handler
+        self._event_bus.subscribe(EventType.KEY_RELEASED, key_release_handler)
 
-    def _framebuffer_size_callback(self, window, width, height):
-        """窗口大小改变回调"""
+    def _viewport_resize_callback(self):
+        """视口大小改变回调"""
+        width, height = dpg.get_viewport_width(), dpg.get_viewport_height()
         self._width = width
         self._height = height
 
-        # 更新OpenGL视口
-        glViewport(0, 0, width, height)
+        # 更新绘图区域大小
+        dpg.configure_item(self._drawlist, width=width, height=height)
 
         # 更新状态
         self._state_manager.set("viewport_width", width)
@@ -175,42 +164,69 @@ class Window(EventHandler):
             "Window"
         ))
 
-    def _key_callback(self, window, key, scancode, action, mods):
-        """键盘事件回调"""
-        # 更新键盘状态
-        if action == glfw.PRESS:
-            self._keys[key] = True
-        elif action == glfw.RELEASE:
-            self._keys[key] = False
-            
+    def _key_press_callback(self, sender, app_data):
+        """键盘按下回调"""
+        key = app_data
+        self._keys[key] = True
+
         # 使用input模块处理键盘事件
-        input_handler.handle_key_event(window, key, scancode, action, mods)
+        input_handler.handle_key_event(None, key, 0, 1, 0)  # 模拟GLFW格式
 
-    def _mouse_button_callback(self, window, button, action, mods):
-        """鼠标按钮事件回调"""
-        if action == glfw.PRESS:
+    def _key_release_callback(self, sender, app_data):
+        """键盘释放回调"""
+        key = app_data
+        self._keys[key] = False
+
+        # 使用input模块处理键盘事件
+        input_handler.handle_key_event(None, key, 0, 0, 0)  # 模拟GLFW格式
+
+    def _mouse_click_callback(self, sender, app_data):
+        """鼠标点击回调"""
+        # app_data might be just button (int) or (button, state) tuple
+        if isinstance(app_data, tuple):
+            button, state = app_data
+        else:
+            button = app_data
+            state = 1 if self._mouse_pressed else 0
+
+        if state == 1:  # 按下
             self._mouse_pressed = True
-            self._last_mouse_x, self._last_mouse_y = glfw.get_cursor_pos(window)
-        elif action == glfw.RELEASE:
+            self._mouse_x, self._mouse_y = dpg.get_mouse_pos()
+            self._last_mouse_x, self._last_mouse_y = self._mouse_x, self._mouse_y
+        else:  # 释放
             self._mouse_pressed = False
-            
+
         # 使用input模块处理鼠标按钮事件
-        input_handler.handle_mouse_button_event(window, button, action, mods)
+        input_handler.handle_mouse_button_event(None, button, state, 0)
 
-    def _cursor_pos_callback(self, window, xpos, ypos):
-        """鼠标位置回调"""
-        self._mouse_x = xpos
-        self._mouse_y = ypos
-        
+    def _mouse_release_callback(self, sender, app_data):
+        """鼠标释放回调"""
+        button = app_data
+        self._mouse_pressed = False
+
+        # 使用input模块处理鼠标按钮事件
+        input_handler.handle_mouse_button_event(None, button, 0, 0)
+
+    def _mouse_move_callback(self, sender, app_data):
+        """鼠标移动回调"""
+        self._mouse_x, self._mouse_y = dpg.get_mouse_pos()
+
         # 使用input模块处理鼠标移动事件
-        input_handler.handle_cursor_position_event(window, xpos, ypos)
+        input_handler.handle_cursor_position_event(None, self._mouse_x, self._mouse_y)
 
-    def _scroll_callback(self, window, xoffset, yoffset):
+    def _mouse_wheel_callback(self, sender, app_data):
         """鼠标滚轮回调"""
-        # 更新Window类的滚轮状态
+        # app_data might be just yoffset (int) or (xoffset, yoffset) tuple
+        if isinstance(app_data, tuple):
+            xoffset, yoffset = app_data
+        else:
+            xoffset = 0
+            yoffset = app_data
+
         self._scroll_y = yoffset
+
         # 使用input模块处理鼠标滚轮事件
-        input_handler.handle_scroll_event(window, xoffset, yoffset)
+        input_handler.handle_scroll_event(None, xoffset, yoffset)
 
     def _handle_mouse_click(self, event: Event) -> None:
         """处理鼠标点击事件"""
@@ -262,24 +278,24 @@ class Window(EventHandler):
         """处理键盘按下事件"""
         key = event.data.get("key")
 
-        # 处理特定按键
-        if key == glfw.KEY_ESCAPE:
+        # 处理特定按键 (使用Dear PyGui键码)
+        if key == 256:  # ESCAPE
             self.should_close = True
-        elif key == glfw.KEY_R:
+        elif key == 82:  # R
             # 重置视图
             self._event_bus.publish(Event(
                 EventType.RESET_VIEW,
                 {},
                 "Window"
             ))
-        elif key == glfw.KEY_G:
+        elif key == 71:  # G
             # 切换网格显示
             self._event_bus.publish(Event(
                 EventType.TOGGLE_GRID,
                 {},
                 "Window"
             ))
-        elif key == glfw.KEY_C:
+        elif key == 67:  # C
             # 清空网格
             self._event_bus.publish(Event(
                 EventType.CLEAR_GRID,
@@ -301,7 +317,7 @@ class Window(EventHandler):
     @property
     def should_close(self) -> bool:
         """获取窗口是否应该关闭"""
-        return self._should_close or glfw.window_should_close(self._window)
+        return self._should_close
 
     @should_close.setter
     def should_close(self, value: bool) -> None:
@@ -314,16 +330,16 @@ class Window(EventHandler):
 
     def update(self) -> None:
         """更新窗口状态"""
-        # 更新GLFW事件
-        glfw.poll_events()
+        # 处理Dear PyGui事件
+        dpg.render_dearpygui_frame()
 
     def render(self, grid: np.ndarray) -> None:
         """渲染内容"""
-        if not self._window or not self._renderer:
+        if not self._renderer:
             return
 
-        # 清除屏幕
-        self._renderer.render_background()
+        # 清除绘图区域
+        dpg.delete_item(self._drawlist, children_only=True)
 
         # 获取相机参数
         cam_x = self._state_manager.get("cam_x", 0.0)
@@ -333,6 +349,9 @@ class Window(EventHandler):
         # 获取视口大小
         viewport_width = self._state_manager.get("viewport_width", self._width)
         viewport_height = self._state_manager.get("viewport_height", self._height)
+
+        # 渲染背景
+        self._renderer.render_background()
 
         # 渲染标记（如果有）
         try:
@@ -358,28 +377,19 @@ class Window(EventHandler):
             viewport_width=viewport_width,
             viewport_height=viewport_height
         )
-        
+
         # 渲染网格
         self._renderer.render_grid(
-            grid, 
+            grid,
             cell_size=self._config_manager.get("cell_size", 1.0),
-            cam_x=cam_x, 
-            cam_y=cam_y, 
+            cam_x=cam_x,
+            cam_y=cam_y,
             cam_zoom=cam_zoom,
             viewport_width=viewport_width,
             viewport_height=viewport_height
         )
 
-
-
-        # 交换缓冲区
-        glfw.swap_buffers(self._window)
-
     def cleanup(self) -> None:
         """清理资源"""
-        if self._window:
-            glfw.destroy_window(self._window)
-            self._window = None
-
-        glfw.terminate()
+        dpg.destroy_context()
         print("[窗口] 资源清理完成")

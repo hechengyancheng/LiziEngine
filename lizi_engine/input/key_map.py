@@ -1,7 +1,8 @@
 """
 键盘映射 - 定义常用键的映射
 """
-import glfw
+# Use GLFW key codes as they are compatible with Dear PyGui
+# GLFW key codes are standard ASCII values for most keys
 
 
 class KeyMap:
@@ -9,124 +10,124 @@ class KeyMap:
 
     # 特殊键
     UNKNOWN = -1
-    SPACE = glfw.KEY_SPACE
-    APOSTROPHE = glfw.KEY_APOSTROPHE
-    COMMA = glfw.KEY_COMMA
-    MINUS = glfw.KEY_MINUS
-    PERIOD = glfw.KEY_PERIOD
-    SLASH = glfw.KEY_SLASH
-    SEMICOLON = glfw.KEY_SEMICOLON
-    EQUAL = glfw.KEY_EQUAL
+    SPACE = 32  # GLFW.KEY_SPACE
+    APOSTROPHE = 39  # GLFW.KEY_APOSTROPHE
+    COMMA = 44  # GLFW.KEY_COMMA
+    MINUS = 45  # GLFW.KEY_MINUS
+    PERIOD = 46  # GLFW.KEY_PERIOD
+    SLASH = 47  # GLFW.KEY_SLASH
+    SEMICOLON = 59  # GLFW.KEY_SEMICOLON
+    EQUAL = 61  # GLFW.KEY_EQUAL
 
     # 数字键
-    _0 = glfw.KEY_0
-    _1 = glfw.KEY_1
-    _2 = glfw.KEY_2
-    _3 = glfw.KEY_3
-    _4 = glfw.KEY_4
-    _5 = glfw.KEY_5
-    _6 = glfw.KEY_6
-    _7 = glfw.KEY_7
-    _8 = glfw.KEY_8
-    _9 = glfw.KEY_9
+    _0 = 48  # GLFW.KEY_0
+    _1 = 49  # GLFW.KEY_1
+    _2 = 50  # GLFW.KEY_2
+    _3 = 51  # GLFW.KEY_3
+    _4 = 52  # GLFW.KEY_4
+    _5 = 53  # GLFW.KEY_5
+    _6 = 54  # GLFW.KEY_6
+    _7 = 55  # GLFW.KEY_7
+    _8 = 56  # GLFW.KEY_8
+    _9 = 57  # GLFW.KEY_9
 
     # 字母键
-    A = glfw.KEY_A
-    B = glfw.KEY_B
-    C = glfw.KEY_C
-    D = glfw.KEY_D
-    E = glfw.KEY_E
-    F = glfw.KEY_F
-    G = glfw.KEY_G
-    H = glfw.KEY_H
-    I = glfw.KEY_I
-    J = glfw.KEY_J
-    K = glfw.KEY_K
-    L = glfw.KEY_L
-    M = glfw.KEY_M
-    N = glfw.KEY_N
-    O = glfw.KEY_O
-    P = glfw.KEY_P
-    Q = glfw.KEY_Q
-    R = glfw.KEY_R
-    S = glfw.KEY_S
-    T = glfw.KEY_T
-    U = glfw.KEY_U
-    V = glfw.KEY_V
-    W = glfw.KEY_W
-    X = glfw.KEY_X
-    Y = glfw.KEY_Y
-    Z = glfw.KEY_Z
+    A = 65  # GLFW.KEY_A
+    B = 66  # GLFW.KEY_B
+    C = 67  # GLFW.KEY_C
+    D = 68  # GLFW.KEY_D
+    E = 69  # GLFW.KEY_E
+    F = 70  # GLFW.KEY_F
+    G = 71  # GLFW.KEY_G
+    H = 72  # GLFW.KEY_H
+    I = 73  # GLFW.KEY_I
+    J = 74  # GLFW.KEY_J
+    K = 75  # GLFW.KEY_K
+    L = 76  # GLFW.KEY_L
+    M = 77  # GLFW.KEY_M
+    N = 78  # GLFW.KEY_N
+    O = 79  # GLFW.KEY_O
+    P = 80  # GLFW.KEY_P
+    Q = 81  # GLFW.KEY_Q
+    R = 82  # GLFW.KEY_R
+    S = 83  # GLFW.KEY_S
+    T = 84  # GLFW.KEY_T
+    U = 85  # GLFW.KEY_U
+    V = 86  # GLFW.KEY_V
+    W = 87  # GLFW.KEY_W
+    X = 88  # GLFW.KEY_X
+    Y = 89  # GLFW.KEY_Y
+    Z = 90  # GLFW.KEY_Z
 
     # 功能键
-    F1 = glfw.KEY_F1
-    F2 = glfw.KEY_F2
-    F3 = glfw.KEY_F3
-    F4 = glfw.KEY_F4
-    F5 = glfw.KEY_F5
-    F6 = glfw.KEY_F6
-    F7 = glfw.KEY_F7
-    F8 = glfw.KEY_F8
-    F9 = glfw.KEY_F9
-    F10 = glfw.KEY_F10
-    F11 = glfw.KEY_F11
-    F12 = glfw.KEY_F12
+    F1 = 290  # GLFW.KEY_F1
+    F2 = 291  # GLFW.KEY_F2
+    F3 = 292  # GLFW.KEY_F3
+    F4 = 293  # GLFW.KEY_F4
+    F5 = 294  # GLFW.KEY_F5
+    F6 = 295  # GLFW.KEY_F6
+    F7 = 296  # GLFW.KEY_F7
+    F8 = 297  # GLFW.KEY_F8
+    F9 = 298  # GLFW.KEY_F9
+    F10 = 299  # GLFW.KEY_F10
+    F11 = 300  # GLFW.KEY_F11
+    F12 = 301  # GLFW.KEY_F12
 
     # 方向键
-    UP = glfw.KEY_UP
-    DOWN = glfw.KEY_DOWN
-    LEFT = glfw.KEY_LEFT
-    RIGHT = glfw.KEY_RIGHT
+    UP = 265  # GLFW.KEY_UP
+    DOWN = 264  # GLFW.KEY_DOWN
+    LEFT = 263  # GLFW.KEY_LEFT
+    RIGHT = 262  # GLFW.KEY_RIGHT
 
     # 特殊键
-    LEFT_SHIFT = glfw.KEY_LEFT_SHIFT
-    RIGHT_SHIFT = glfw.KEY_RIGHT_SHIFT
-    LEFT_CONTROL = glfw.KEY_LEFT_CONTROL
-    RIGHT_CONTROL = glfw.KEY_RIGHT_CONTROL
-    LEFT_ALT = glfw.KEY_LEFT_ALT
-    RIGHT_ALT = glfw.KEY_RIGHT_ALT
-    LEFT_SUPER = glfw.KEY_LEFT_SUPER
-    RIGHT_SUPER = glfw.KEY_RIGHT_SUPER
-    TAB = glfw.KEY_TAB
-    ENTER = glfw.KEY_ENTER
-    BACKSPACE = glfw.KEY_BACKSPACE
-    INSERT = glfw.KEY_INSERT
-    DELETE = glfw.KEY_DELETE
-    PAGE_UP = glfw.KEY_PAGE_UP
-    PAGE_DOWN = glfw.KEY_PAGE_DOWN
-    HOME = glfw.KEY_HOME
-    END = glfw.KEY_END
-    CAPS_LOCK = glfw.KEY_CAPS_LOCK
-    SCROLL_LOCK = glfw.KEY_SCROLL_LOCK
-    NUM_LOCK = glfw.KEY_NUM_LOCK
-    PRINT_SCREEN = glfw.KEY_PRINT_SCREEN
-    PAUSE = glfw.KEY_PAUSE
-    ESCAPE = glfw.KEY_ESCAPE
+    LEFT_SHIFT = 340  # GLFW.KEY_LEFT_SHIFT
+    RIGHT_SHIFT = 344  # GLFW.KEY_RIGHT_SHIFT
+    LEFT_CONTROL = 341  # GLFW.KEY_LEFT_CONTROL
+    RIGHT_CONTROL = 345  # GLFW.KEY_RIGHT_CONTROL
+    LEFT_ALT = 342  # GLFW.KEY_LEFT_ALT
+    RIGHT_ALT = 346  # GLFW.KEY_RIGHT_ALT
+    LEFT_SUPER = 343  # GLFW.KEY_LEFT_SUPER
+    RIGHT_SUPER = 347  # GLFW.KEY_RIGHT_SUPER
+    TAB = 258  # GLFW.KEY_TAB
+    ENTER = 257  # GLFW.KEY_ENTER
+    BACKSPACE = 259  # GLFW.KEY_BACKSPACE
+    INSERT = 260  # GLFW.KEY_INSERT
+    DELETE = 261  # GLFW.KEY_DELETE
+    PAGE_UP = 266  # GLFW.KEY_PAGE_UP
+    PAGE_DOWN = 267  # GLFW.KEY_PAGE_DOWN
+    HOME = 268  # GLFW.KEY_HOME
+    END = 269  # GLFW.KEY_END
+    CAPS_LOCK = 280  # GLFW.KEY_CAPS_LOCK
+    SCROLL_LOCK = 281  # GLFW.KEY_SCROLL_LOCK
+    NUM_LOCK = 282  # GLFW.KEY_NUM_LOCK
+    PRINT_SCREEN = 283  # GLFW.KEY_PRINT_SCREEN
+    PAUSE = 284  # GLFW.KEY_PAUSE
+    ESCAPE = 256  # GLFW.KEY_ESCAPE
 
     # 小键盘
-    KP_0 = glfw.KEY_KP_0
-    KP_1 = glfw.KEY_KP_1
-    KP_2 = glfw.KEY_KP_2
-    KP_3 = glfw.KEY_KP_3
-    KP_4 = glfw.KEY_KP_4
-    KP_5 = glfw.KEY_KP_5
-    KP_6 = glfw.KEY_KP_6
-    KP_7 = glfw.KEY_KP_7
-    KP_8 = glfw.KEY_KP_8
-    KP_9 = glfw.KEY_KP_9
-    KP_DECIMAL = glfw.KEY_KP_DECIMAL
-    KP_DIVIDE = glfw.KEY_KP_DIVIDE
-    KP_MULTIPLY = glfw.KEY_KP_MULTIPLY
-    KP_SUBTRACT = glfw.KEY_KP_SUBTRACT
-    KP_ADD = glfw.KEY_KP_ADD
-    KP_ENTER = glfw.KEY_KP_ENTER
-    KP_EQUAL = glfw.KEY_KP_EQUAL
+    KP_0 = 320  # GLFW.KEY_KP_0
+    KP_1 = 321  # GLFW.KEY_KP_1
+    KP_2 = 322  # GLFW.KEY_KP_2
+    KP_3 = 323  # GLFW.KEY_KP_3
+    KP_4 = 324  # GLFW.KEY_KP_4
+    KP_5 = 325  # GLFW.KEY_KP_5
+    KP_6 = 326  # GLFW.KEY_KP_6
+    KP_7 = 327  # GLFW.KEY_KP_7
+    KP_8 = 328  # GLFW.KEY_KP_8
+    KP_9 = 329  # GLFW.KEY_KP_9
+    KP_DECIMAL = 330  # GLFW.KEY_KP_DECIMAL
+    KP_DIVIDE = 331  # GLFW.KEY_KP_DIVIDE
+    KP_MULTIPLY = 332  # GLFW.KEY_KP_MULTIPLY
+    KP_SUBTRACT = 333  # GLFW.KEY_KP_SUBTRACT
+    KP_ADD = 334  # GLFW.KEY_KP_ADD
+    KP_ENTER = 335  # GLFW.KEY_KP_ENTER
+    KP_EQUAL = 336  # GLFW.KEY_KP_EQUAL
 
     # 修饰键
-    MOD_SHIFT = glfw.MOD_SHIFT
-    MOD_CONTROL = glfw.MOD_CONTROL
-    MOD_ALT = glfw.MOD_ALT
-    MOD_SUPER = glfw.MOD_SUPER
+    MOD_SHIFT = 1  # GLFW.MOD_SHIFT
+    MOD_CONTROL = 2  # GLFW.MOD_CONTROL
+    MOD_ALT = 4  # GLFW.MOD_ALT
+    MOD_SUPER = 8  # GLFW.MOD_SUPER
 
     @staticmethod
     def get_key_name(key: int) -> str:
