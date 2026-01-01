@@ -128,6 +128,51 @@ class CPUVectorFieldCalculator:
 
         return grid
 
+    def create_tangential_pattern(self, grid: np.ndarray, center: Tuple[float, float] = None,
+                               radius: float = None, magnitude: float = 1.0) -> np.ndarray:
+        """在网格上创建切线向量模式（旋转）"""
+        if grid is None or not isinstance(grid, np.ndarray):
+            raise TypeError("grid 必须是 numpy.ndarray 类型")
+
+        h, w = grid.shape[:2]
+
+        # 如果未指定中心，则使用网格中心
+        if center is None:
+            center = (w // 2, h // 2)
+
+        # 如果未指定半径，则使用网格尺寸的1/4
+        if radius is None:
+            radius = min(w, h) // 4
+
+        cx, cy = center
+
+        # 创建坐标网格
+        y_coords, x_coords = np.mgrid[0:h, 0:w]
+
+        # 计算每个点到中心的距离和方向
+        dx = x_coords - cx
+        dy = y_coords - cy
+        dist = np.sqrt(dx**2 + dy**2)
+
+        # 创建掩码：只处理在半径内且不在中心的点
+        mask = (dist < radius) & (dist > 0)
+
+        # 计算切线角度（径向角度+90度）
+        angle = np.arctan2(dy, dx) + np.pi/2
+
+        # 计算向量大小（从中心向外递减）
+        vec_magnitude = magnitude * (1.0 - (dist / radius))
+
+        # 计算向量分量
+        vx = vec_magnitude * np.cos(angle)
+        vy = vec_magnitude * np.sin(angle)
+
+        # 应用到网格
+        grid[mask, 0] += vx[mask]
+        grid[mask, 1] += vy[mask]
+
+        return grid
+
     def create_tiny_vector(self, grid: np.ndarray, x: float, y: float, mag: float = 1.0) -> None:
         """在指定位置创建一个微小的向量场影响,只影响位置本身及上下左右四个邻居"""
         if not hasattr(grid, "ndim"):
@@ -216,48 +261,39 @@ class CPUVectorFieldCalculator:
         vy = (1 - wx) * (1 - wy) * v00[1] + wx * (1 - wy) * v01[1] + (1 - wx) * wy * v10[1] + wx * wy * v11[1]
 
         return (vx, vy)
+    
+    def fit_vector_at_position_fp32(self, grid: np.ndarray, x: float, y: float) -> Tuple[float, float]:
+        """在浮点坐标处拟合向量值，使用双线性插值（单精度浮点版本）"""
+        if not self._initialized:
+            raise RuntimeError("GPU计算器未初始化")
 
-    def create_tangential_pattern(self, grid: np.ndarray, center: Tuple[float, float] = None,
-                               radius: float = None, magnitude: float = 1.0) -> np.ndarray:
-        """在网格上创建切线向量模式（旋转）"""
-        if grid is None or not isinstance(grid, np.ndarray):
-            raise TypeError("grid 必须是 numpy.ndarray 类型")
+        if not hasattr(grid, "ndim") or grid.ndim < 3 or grid.shape[2] < 2:
+            return (0.0, 0.0)
 
-        h, w = grid.shape[:2]
+        h, w = grid.shape[0], grid.shape[1]
 
-        # 如果未指定中心，则使用网格中心
-        if center is None:
-            center = (w // 2, h // 2)
+        # 确保坐标在有效范围内，使用单精度
+        x_fp32 = np.float32(max(0.0, min(w - 1.0, float(x))))
+        y_fp32 = np.float32(max(0.0, min(h - 1.0, float(y))))
 
-        # 如果未指定半径，则使用网格尺寸的1/4
-        if radius is None:
-            radius = min(w, h) // 4
+        # 计算四个最近的整数坐标
+        x0 = int(np.floor(x_fp32))
+        x1 = min(x0 + 1, w - 1)
+        y0 = int(np.floor(y_fp32))
+        y1 = min(y0 + 1, h - 1)
 
-        cx, cy = center
+        # 获取四个角的向量值
+        v00 = (np.float32(grid[y0, x0, 0]), np.float32(grid[y0, x0, 1]))
+        v01 = (np.float32(grid[y0, x1, 0]), np.float32(grid[y0, x1, 1]))
+        v10 = (np.float32(grid[y1, x0, 0]), np.float32(grid[y1, x0, 1]))
+        v11 = (np.float32(grid[y1, x1, 0]), np.float32(grid[y1, x1, 1]))
 
-        # 创建坐标网格
-        y_coords, x_coords = np.mgrid[0:h, 0:w]
+        # 计算插值权重，使用单精度
+        wx = np.float32(x_fp32 - x0)
+        wy = np.float32(y_fp32 - y0)
 
-        # 计算每个点到中心的距离和方向
-        dx = x_coords - cx
-        dy = y_coords - cy
-        dist = np.sqrt(dx**2 + dy**2)
+        # 双线性插值，使用单精度
+        vx = np.float32((1 - wx) * (1 - wy) * v00[0] + wx * (1 - wy) * v01[0] + (1 - wx) * wy * v10[0] + wx * wy * v11[0])
+        vy = np.float32((1 - wx) * (1 - wy) * v00[1] + wx * (1 - wy) * v01[1] + (1 - wx) * wy * v10[1] + wx * wy * v11[1])
 
-        # 创建掩码：只处理在半径内且不在中心的点
-        mask = (dist < radius) & (dist > 0)
-
-        # 计算切线角度（径向角度+90度）
-        angle = np.arctan2(dy, dx) + np.pi/2
-
-        # 计算向量大小（从中心向外递减）
-        vec_magnitude = magnitude * (1.0 - (dist / radius))
-
-        # 计算向量分量
-        vx = vec_magnitude * np.cos(angle)
-        vy = vec_magnitude * np.sin(angle)
-
-        # 应用到网格
-        grid[mask, 0] += vx[mask]
-        grid[mask, 1] += vy[mask]
-
-        return grid
+        return (float(vx), float(vy))

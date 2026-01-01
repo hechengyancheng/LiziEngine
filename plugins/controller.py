@@ -61,7 +61,7 @@ class Controller:
                 return
 
             radius = 2
-            mag = 2
+            mag = 1
             magnitude = mag if self.vector_field_direction else -mag
 
             direction = "朝外" if self.vector_field_direction else "朝内"

@@ -144,6 +144,13 @@ class VectorFieldCalculator(EventHandler):
         calculator = self._gpu_calculator if self._current_device == "gpu" and self._gpu_calculator else self._cpu_calculator
 
         return calculator.fit_vector_at_position(grid, x, y)
+    
+    def fit_vector_at_position_fp32(self, grid: np.ndarray, x: float, y: float) -> Tuple[float, float]:
+        """在浮点坐标处拟合向量值，使用双线性插值，返回单精度浮点数"""
+        # 根据当前设备选择计算器
+        calculator = self._gpu_calculator if self._current_device == "gpu" and self._gpu_calculator else self._cpu_calculator
+
+        return calculator.fit_vector_at_position_fp32(grid, x, y)
 
     def handle(self, event: Event) -> None:
         """处理事件"""

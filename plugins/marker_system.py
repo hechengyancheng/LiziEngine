@@ -80,7 +80,7 @@ class MarkerSystem:
 
             try:
                 # 在浮点坐标处拟合向量值
-                fitted_vx, fitted_vy = self.fit_vector_at_position(grid, x, y)
+                fitted_vx, fitted_vy = self.fit_vector_at_position_fp32(grid, x, y)
                 '''
                 # 计算拟合向量的幅值
                 fitted_mag = np.sqrt(fitted_vx**2 + fitted_vy**2)
@@ -128,6 +128,10 @@ class MarkerSystem:
     def fit_vector_at_position(self, grid: np.ndarray, x: float, y: float) -> Tuple[float, float]:
         # 在指定位置拟合一个向量
         return self.vector_calculator.fit_vector_at_position(grid, x, y)
+    
+    def fit_vector_at_position_fp32(self, grid: np.ndarray, x: float, y: float) -> Tuple[float, float]:
+        # 在指定位置拟合一个向量
+        return self.vector_calculator.fit_vector_at_position_fp32(grid, x, y)
 
     def _sync_to_state_manager(self) -> None:
         """将标记列表同步到状态管理器"""
