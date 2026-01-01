@@ -5,13 +5,18 @@ GUI管理器模块 - 提供Dear PyGui界面管理功能
 import dearpygui.dearpygui as dpg
 import numpy as np
 from typing import Optional, Callable, Dict, Any, Tuple
-from ..core.config import config_manager
-from ..core.events import Event, EventType, event_bus, EventHandler, FunctionEventHandler
-from ..core.state import state_manager
-from ..graphics.renderer import VectorFieldRenderer
-from ..input import input_handler
-from ..compute.vector_field import vector_calculator
-from .opengl_embedder import OpenGLEmbedder
+import sys
+import os
+# Add project root to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+from lizi_engine.core.config import config_manager
+from lizi_engine.core.events import Event, EventType, event_bus, EventHandler, FunctionEventHandler
+from lizi_engine.core.state import state_manager
+from lizi_engine.graphics.renderer import VectorFieldRenderer
+from lizi_engine.input import input_handler
+from lizi_engine.compute.vector_field import vector_calculator
+from lizi_engine.gui.opengl_embedder import OpenGLEmbedder
 
 class GUIManager(EventHandler):
     """GUI管理器 - 使用Dear PyGui管理界面"""
@@ -361,7 +366,7 @@ class GUIManager(EventHandler):
 
     def render(self) -> None:
         """渲染GUI内容"""
-        if not self._initialized or not self._renderer or not self._grid or not self._opengl_embedder:
+        if not self._initialized or not self._renderer or self._grid is None or not self._opengl_embedder:
             return
 
         # 开始OpenGL渲染到帧缓冲

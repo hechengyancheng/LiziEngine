@@ -16,6 +16,11 @@ class MarkerSystem:
         # 标记列表，存储浮点网格坐标 {'x':float,'y':float,'mag':float,'vx':float,'vy':float}
         self.markers = []
 
+    def update(self):
+        """更新标记系统"""
+        # 这里可以添加更新逻辑，如果需要的话
+        pass
+
     def add_marker(self, x: float, y: float, mag: float = 1.0, vx: float = 0.0, vy: float = 0.0) -> None:
         """添加一个新标记
 

@@ -17,6 +17,10 @@ class Controller:
         # 向量场方向状态：True表示朝外，False表示朝内
         self.vector_field_direction = True
 
+    def update(self):
+        """更新控制器状态"""
+        pass
+
     def reset_view(self):
         """重置视图"""
         try:
