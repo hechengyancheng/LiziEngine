@@ -285,7 +285,7 @@ A: 目前主要在 Windows 上测试，其他操作系统可能需要调整依�
 ### 开发环境设置
 
 ```bash
-git clone https://github.com/your-repo/LiziEngine.git
+git clone https://github.com/hechengyancheng/LiziEngine.git
 cd LiziEngine
 pip install -r requirements.txt
 ```
@@ -294,12 +294,13 @@ pip install -r requirements.txt
 
 - 使用PEP 8风格
 - 添加必要的注释和文档字符串
-- 提交前运行现有测试
+- 提交前进行测试
 
 ### API 文档
 
 详细的API文档请参考 `doc/` 目录下的文档：
 - [READEME.md](doc/README.md)
+
 
 
 
