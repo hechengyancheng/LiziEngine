@@ -1,132 +1,319 @@
 
-# LiziEngine
+# LiziEngine API 文档
 
 ## 项目概述
 
-向量场可视化引擎，采用现代化的架构设计，提供高性能的向量场计算和渲染功能。
+LiziEngine 是一个现代化的向量场可视化引擎，采用模块化架构设计，提供高性能的向量场计算和渲染功能。通过模拟物理中的力场（如电磁力），LiziEngine 能够高效处理实体间的受力计算，避免传统碰撞检测的性能瓶颈。
 
-## 项目特点
+## 核心特性
 
-- **模块化设计**: 将代码按功能划分为多个模块，每个模块职责单一
-- **依赖注入**: 避免单例模式，降低模块间耦合
-- **事件驱动**: 采用事件系统进行模块间通信，降低耦合度，支持异步处理
-- **状态集中管理**: 统一的状态管理，避免全局变量滥用
-- **配置统一管理**: 集中的配置管理，支持从文件加载配置和热更新
-- **资源管理**: 更好的资源生命周期管理，防止内存泄漏
-- **高性能计算**: 支持CPU和GPU加速计算
-
-## 架构设计
-
-### 核心模块 (core/)
-
-- **container.py**: 依赖注入容器，提供依赖注入功能，避免单例模式，降低模块间耦合
-- **events.py**: 事件系统，提供发布-订阅模式的事件通信机制，支持异步处理
-- **state.py**: 状态管理，提供统一的状态管理功能，支持状态变更通知和状态快照
-- **config.py**: 配置管理，提供统一的配置管理功能，支持从文件加载配置和热更新
-- **app.py**: 应用核心，整合各个管理器，提供统一的应用程序接口
-
-### 计算模块 (compute/)
-
-- **vector_field.py**: 向量场计算，提供向量场计算的核心功能，支持CPU和GPU计算
-- **cpu_vector_field.py**: CPU向量场计算，提供基于CPU的向量场计算功能
-- **gpu_vector_field.py**: GPU向量场计算，提供基于OpenCL的GPU向量场计算实现
-
-### 图形模块 (graphics/)
-
-- **renderer.py**: 渲染器，提供向量场的渲染功能，支持OpenGL渲染和着色器程序
-
-### 窗口管理模块 (window/)
-
-- **window.py**: 窗口管理，提供窗口管理功能，支持OpenGL窗口创建和事件处理
-
-## 项目结构
-
-```
-LiziEngine-Reborn/
-├── docs/              # 文档目录
-├── lizi_engine/       # 主代码目录
-│   ├── core/          # 核心模块
-│   ├── compute/       # 计算模块
-│   ├── graphics/      # 图形渲染模块
-│   ├── window/        # 窗口管理模块
-├── examples/         # 示例代码
-├── plugin/           # 插件模块
-├── requirements.txt  # 项目依赖
-```
+- **高性能计算**: 支持 CPU 和 GPU 加速计算，适合大规模向量场模拟
+- **模块化架构**: 采用依赖注入、事件驱动和状态管理的设计模式
+- **灵活的插件系统**: 支持自定义计算模式、渲染效果和用户交互
+- **实时可视化**: 基于 OpenGL 的高效渲染，支持交互式操作
+- **易于扩展**: 清晰的 API 接口，便于开发者添加新功能
 
 ## 快速开始
 
-### 安装依赖
+### 安装
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 运行示例
+### 基本使用
 
-```bash
-# 基本使用示例
-python examples/basic_usage.py
+```python
+from lizi_engine.compute.vector_field import vector_calculator
 
-# 向量场模式示例
-python examples/patterns.py
+# 创建向量网格
+grid = vector_calculator.create_vector_grid(width=640, height=480)
+
+# 创建径向向量场模式
+vector_calculator.create_radial_pattern(grid, center=(320, 240), radius=100, magnitude=1.0)
+
+# 更新向量场
+updated_grid = vector_calculator.update_grid_with_adjacent_sum(grid)
 ```
 
-## 架构设计
+## 架构概览
 
-LiziEngine采用现代化的架构设计，主要包括以下模块：
+LiziEngine 采用分层架构设计，主要包含以下模块：
 
-### 核心模块 (core)
+### 核心层 (core/)
 
-- **容器 (container.py)**: 提供依赖注入功能，避免单例模式，降低模块间耦合
-- **事件系统 (events.py)**: 提供发布-订阅模式的事件通信机制，支持异步处理
-- **状态管理 (state.py)**: 提供统一的状态管理功能，支持状态变更通知和状态快照
-- **配置管理 (config.py)**: 提供统一的配置管理功能，支持从文件加载配置和热更新
-- **应用核心 (app.py)**: 整合各个管理器，提供统一的应用程序接口
+负责应用的生命周期管理和模块间协调：
 
-### 计算模块 (compute)
+- **AppCore**: 应用核心，整合所有管理器
+- **Container**: 依赖注入容器
+- **EventBus**: 事件系统
+- **StateManager**: 状态管理
+- **ConfigManager**: 配置管理
 
-- **向量场计算 (vector_field.py)**: 提供向量场计算的核心功能，支持CPU和GPU计算
-- **CPU计算 (cpu_vector_field.py)**: 基于CPU的向量场计算实现
-- **GPU计算 (gpu_vector_field.py)**: 基于OpenCL的GPU向量场计算实现
+### 计算层 (compute/)
 
-### 图形渲染模块 (graphics)
+提供向量场计算功能：
 
-- **渲染器 (renderer.py)**: 提供向量场的渲染功能，支持OpenGL渲染和着色器程序
+- **VectorFieldCalculator**: 主计算接口，支持 CPU/GPU 切换
+- **CPUVectorFieldCalculator**: CPU 实现
+- **GPUVectorFieldCalculator**: GPU 实现（基于 OpenCL）
 
-### 窗口管理模块 (window)
+### 渲染层 (graphics/)
 
-- **窗口管理 (window.py)**: 提供窗口管理功能，支持OpenGL窗口创建和事件处理
+处理可视化渲染：
 
-## 开发指南
+- **VectorFieldRenderer**: 向量场渲染器
+- **ShaderProgram**: 着色器程序管理
 
-### 添加新功能
+### 窗口层 (window/)
 
-1. 在相应的模块中添加新功能
-2. 通过事件系统与其他模块通信
-3. 更新配置文件（如需要）
-4. 更新状态（如需要）
+管理窗口和输入：
 
-### 自定义渲染器
+- **Window**: GLFW 窗口管理
+- **InputHandler**: 输入事件处理
 
-1. 继承 `VectorFieldRenderer` 类
-2. 重写相应的渲染方法
-3. 在应用核心中注册新的渲染器
+### 插件层 (plugins/)
 
-### 自定义计算器
+扩展功能：
 
-1. 继承 `VectorFieldCalculator` 类
-2. 实现自定义的计算方法
-3. 在应用核心中注册新的计算器
+- **UIManager**: UI 插件基类
+- **Controller**: 控制器插件
+- **MarkerSystem**: 标记系统
 
-## 注意事项
+## API 参考
 
-1. 避免直接修改其他模块的内部状态
-2. 使用事件系统进行模块间通信
-3. 遵循单一职责原则
-4. 保持配置和状态的一致性
-5. 依赖注入容器负责管理组件的生命周期
-6. 使用GPU计算时需要确保OpenCL环境已正确配置
+### VectorFieldCalculator
+
+向量场计算器的主要接口。
+
+#### 方法
+
+##### create_vector_grid(width: int, height: int, default: Tuple[float, float] = (0, 0)) -> np.ndarray
+
+创建指定大小的向量网格。
+
+**参数:**
+- `width` (int): 网格宽度
+- `height` (int): 网格高度
+- `default` (Tuple[float, float]): 默认向量值
+
+**返回值:** 形状为 (height, width, 2) 的 numpy 数组
+
+**示例:**
+```python
+grid = vector_calculator.create_vector_grid(640, 480, (0.0, 0.0))
+```
+
+##### update_grid_with_adjacent_sum(grid: np.ndarray) -> np.ndarray
+
+根据相邻向量更新整个网格。
+
+**参数:**
+- `grid` (np.ndarray): 输入网格
+
+**返回值:** 更新后的网格
+
+**示例:**
+```python
+updated_grid = vector_calculator.update_grid_with_adjacent_sum(grid)
+```
+
+##### create_radial_pattern(grid: np.ndarray, center: Tuple[float, float] = None, radius: float = None, magnitude: float = 1.0) -> np.ndarray
+
+创建径向向量场模式（从中心向外辐射）。
+
+**参数:**
+- `grid` (np.ndarray): 目标网格
+- `center` (Tuple[float, float]): 中心坐标，默认为网格中心
+- `radius` (float): 影响半径，默认为网格最小边长的一半
+- `magnitude` (float): 向量强度
+
+**返回值:** 修改后的网格
+
+##### create_tangential_pattern(grid: np.ndarray, center: Tuple[float, float] = None, radius: float = None, magnitude: float = 1.0) -> np.ndarray
+
+创建切线向量场模式（围绕中心旋转）。
+
+**参数:**
+- `grid` (np.ndarray): 目标网格
+- `center` (Tuple[float, float]): 中心坐标，默认为网格中心
+- `radius` (float): 影响半径，默认为网格最小边长的一半
+- `magnitude` (float): 向量强度
+
+**返回值:** 修改后的网格
+
+##### add_vector_at_position(grid: np.ndarray, x: float, y: float, vx: float, vy: float) -> None
+
+在指定浮点坐标处添加向量，使用双线性插值分布到相邻整数坐标。
+
+**参数:**
+- `grid` (np.ndarray): 目标网格
+- `x` (float): X 坐标
+- `y` (float): Y 坐标
+- `vx` (float): X 分量
+- `vy` (float): Y 分量
+
+##### fit_vector_at_position(grid: np.ndarray, x: float, y: float) -> Tuple[float, float]
+
+在指定浮点坐标处使用双线性插值拟合向量值。
+
+**参数:**
+- `grid` (np.ndarray): 输入网格
+- `x` (float): X 坐标
+- `y` (float): Y 坐标
+
+**返回值:** 插值后的向量 (vx, vy)
+
+##### set_device(device: str) -> bool
+
+设置计算设备。
+
+**参数:**
+- `device` (str): "cpu" 或 "gpu"
+
+**返回值:** 设置是否成功
+
+### ConfigManager
+
+配置管理器。
+
+#### 方法
+
+##### get(key: str, default: Any = None) -> Any
+
+获取配置值。
+
+**参数:**
+- `key` (str): 配置键，支持点分隔的嵌套访问
+- `default` (Any): 默认值
+
+**示例:**
+```python
+width = config_manager.get("grid.width", 640)
+```
+
+##### set(key: str, value: Any) -> None
+
+设置配置值。
+
+**参数:**
+- `key` (str): 配置键
+- `value` (Any): 配置值
+
+### StateManager
+
+状态管理器。
+
+#### 方法
+
+##### get(key: str, default: Any = None) -> Any
+
+获取状态值。
+
+##### set(key: str, value: Any) -> None
+
+设置状态值并触发变更通知。
+
+### EventBus
+
+事件系统。
+
+#### 方法
+
+##### subscribe(event_type: EventType, handler: EventHandler) -> None
+
+订阅事件。
+
+##### publish(event: Event) -> None
+
+发布事件。
+
+## 插件开发
+
+### 创建计算插件
+
+```python
+from lizi_engine.compute.vector_field import VectorFieldCalculator
+
+class MyComputePlugin:
+    def __init__(self, vector_calculator: VectorFieldCalculator):
+        self.calculator = vector_calculator
+
+    def create_custom_pattern(self, grid: np.ndarray) -> np.ndarray:
+        # 实现自定义向量场模式
+        h, w = grid.shape[:2]
+        for y in range(h):
+            for x in range(w):
+                vx = np.sin(x * 0.01) * np.cos(y * 0.01)
+                vy = np.cos(x * 0.01) * np.sin(y * 0.01)
+                grid[y, x] = (vx, vy)
+        return grid
+```
+
+### 创建 UI 插件
+
+```python
+from plugins.ui import UIManager
+from lizi_engine.input import input_handler, KeyMap
+
+class MyUIPlugin(UIManager):
+    def register_callbacks(self, grid: np.ndarray, **kwargs):
+        super().register_callbacks(grid, **kwargs)
+
+        def on_custom_key():
+            print("Custom action triggered!")
+
+        input_handler.register_key_callback(KeyMap.X, on_custom_key)
+```
+
+## 配置说明
+
+LiziEngine 使用 JSON 配置文件，支持运行时热更新。
+
+### 示例配置
+
+```json
+{
+  "grid": {
+    "width": 640,
+    "height": 480
+  },
+  "vector": {
+    "scale": 1.0,
+    "self": {"weight": 0.2},
+    "neighbor": {"weight": 0.2}
+  },
+  "compute": {
+    "device": "gpu",
+    "iterations": 1
+  },
+  "render": {
+    "vector": {"lines": false}
+  }
+}
+```
+
+## 性能优化
+
+- **GPU 加速**: 对于大规模计算，推荐使用 GPU 模式
+- **权重调优**: 调整自身权重和邻居权重以优化计算效果
+- **迭代次数**: 根据需要调整向量场更新迭代次数
+- **内存管理**: 及时清理不再使用的网格对象
+
+## 故障排除
+
+### 常见问题
+
+1. **GPU 计算不可用**: 确保系统安装了 OpenCL 运行时
+2. **OpenGL 错误**: 检查显卡驱动是否支持 OpenGL
+3. **内存不足**: 减小网格尺寸或使用 CPU 模式
+4. **性能问题**: 调整配置参数或切换计算设备
+
+### 调试技巧
+
+- 使用 `vector_calculator.current_device` 检查当前计算设备
+- 查看控制台输出了解初始化状态
+- 使用配置文件调整调试选项
 
 ## 许可证
 

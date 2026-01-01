@@ -5,6 +5,31 @@
 ![Version](https://img.shields.io/badge/Version-0.1.0Alpha-000000?style=flat)
 ![Language](https://img.shields.io/badge/Language-Python-f5ec00?style=flat)
 
+## 目录
+
+- [项目概述](#项目概述)
+- [视频演示](#视频演示)
+- [安装和运行](#安装和运行)
+  - [系统要求](#系统要求)
+  - [下载方式](#下载方式)
+  - [安装依赖](#安装依赖)
+  - [运行示例](#运行示例)
+  - [键盘控制](#键盘控制)
+- [向量场计算原理](#向量场计算原理)
+  - [基本概念](#基本概念)
+  - [计算方法](#计算方法)
+  - [支持的向量场模式](#支持的向量场模式)
+  - [CPU vs GPU 计算](#cpu-vs-gpu-计算)
+- [架构设计](#架构设计)
+  - [底层引擎 (lizi_engine/)](#底层引擎-lizi_engine)
+  - [插件系统 (plugins/)](#插件系统-plugins)
+- [配置说明](#配置说明)
+- [更新日志](#更新日志)
+- [常见问题](#常见问题)
+- [许可证](#许可证)
+- [联系方式](#联系方式)
+- [贡献](#贡献)
+
 ## 项目概述
 
 LiziEngine 是一个由向量场驱动的物理引擎，它通过模拟现实中的力场（如电磁力）来驱动实体运动，从而在根本上解决传统方法在处理碰撞检测的性能瓶颈。相比与每个实体互相遍历计算，本项目仅需让它们独立计算坐标下的向量值即可处理受力问题。
@@ -14,7 +39,6 @@ LiziEngine 是一个由向量场驱动的物理引擎，它通过模拟现实中
 [重力模拟与电荷模拟 【物理引擎开发日志#01】-哔哩哔哩](https://b23.tv/1Bj1y19)
 
 [A Physics Engine Without Collision Detection -Youtube](https://youtube.com/shorts/vhOnfVl3CO8?si=xlLsO2X8CiU1n6YD)
-
 
 ## 安装和运行
 
@@ -26,7 +50,7 @@ LiziEngine 是一个由向量场驱动的物理引擎，它通过模拟现实中
 
 ### 下载方式
 
-直接下载源码并解压，发行版里是打包的底层轮子。
+直接下载源码并解压，发行版里是打包的底层库。
 
 ### 安装依赖
 
@@ -34,6 +58,13 @@ LiziEngine 是一个由向量场驱动的物理引擎，它通过模拟现实中
 pip install -r requirements.txt
 # 或者使用 pip install lizi-engine 直接安装底层库
 ```
+
+主要依赖包：
+- numpy>=1.21.0 (数值计算)
+- glfw>=2.5.0 (窗口管理)
+- PyOpenGL>=3.1.6 (OpenGL 渲染)
+- pyopencl>=2021.1.0 (GPU 计算，可选)
+- pybind11>=2.6.0 (C++ 绑定)
 
 ### 运行示例
 
@@ -51,6 +82,14 @@ python examples/patterns.py
 python examples/input_demo.py
 ```
 
+### 测试
+
+目前项目处于alpha阶段，测试覆盖有限。如需运行现有测试：
+
+```bash
+python -m pytest tests/  
+```
+
 ### 键盘控制
 
 - **空格键**: 重新生成切线模式
@@ -65,8 +104,6 @@ python examples/input_demo.py
 ### 基本概念
 
 向量场是一个二维网格数据结构，每个网格点包含一个二维向量 `(vx, vy)`，表示该点的方向和强度。向量场的计算涉及相邻点的相互影响，形成复杂的动态模式。
-
-本项目遵守“大道至简”的原则，核心计算逻辑只有两个：迭代向量场与平滑向量值
 
 ### 计算方法
 
@@ -209,6 +246,29 @@ create_tangential_pattern(self, grid, center, radius, magnitude)
 }
 ```
 
+## 更新日志
+
+### v0.1.0 Alpha (2026-01-01)
+- 初始发布版本
+- 支持向量场驱动的物理模拟
+- 实现 CPU 和 GPU 计算模式
+- 提供基本插件系统
+- 包含多个示例程序
+
+## 常见问题
+
+### Q: 如何切换 CPU 和 GPU 计算模式？
+A: 在 `config.json` 中设置 `"compute": {"device": "cpu"}` 或 `"gpu"`。
+
+### Q: 运行示例时出现 OpenGL 错误怎么办？
+A: 确保您的系统支持 OpenGL，并安装了合适的图形驱动。
+
+### Q: 如何添加自定义向量场模式？
+A: 参考 `lizi_engine/compute/vector_field.py` 中的现有模式，实现新的计算函数。
+
+### Q: 项目支持哪些操作系统？
+A: 目前主要在 Windows 上测试，其他操作系统可能需要调整依赖。
+
 ## 许可证
 
 [MIT License](LICENSE)
@@ -222,5 +282,34 @@ create_tangential_pattern(self, grid, center, radius, magnitude)
 本项目处于demo阶段，可能存在一些未发现的问题。
 我们需要你的支持与协助！
 如果你感兴趣，请务必点一个star让我们被更多人看到！
+
+### 如何贡献
+
+1. **报告问题**: 如果您发现bug或有功能建议，请在GitHub Issues中提交。
+2. **提交代码**: Fork本仓库，创建功能分支，提交PR。
+3. **文档改进**: 帮助完善文档或添加示例。
+4. **测试**: 在不同平台上测试并报告兼容性问题。
+
+### 开发环境设置
+
+```bash
+git clone https://github.com/your-repo/LiziEngine.git
+cd LiziEngine
+pip install -r requirements.txt
+# 运行测试 
+python -m pytest tests/ 
+```
+
+### 代码规范
+
+- 使用PEP 8风格
+- 添加必要的注释和文档字符串
+- 提交前运行现有测试
+
+### API 文档
+
+详细的API文档请参考 `doc/` 目录下的文档：
+- [READEME.md](doc/README.md)
+
 
 
