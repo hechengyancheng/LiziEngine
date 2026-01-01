@@ -72,7 +72,13 @@ class GUIManager(EventHandler):
 
             # 创建纹理注册表
             with dpg.texture_registry() as self._texture_registry:
-                pass
+                # 在纹理注册表上下文中创建纹理
+                self._opengl_texture = dpg.add_raw_texture(
+                    width=self._render_width,
+                    height=self._render_height,
+                    default_value=np.zeros((self._render_height, self._render_width, 3), dtype=np.float32).flatten(),
+                    format=dpg.mvFormat_Float_rgb
+                )
 
             # 创建主界面
             self._create_main_interface()
@@ -199,8 +205,8 @@ class GUIManager(EventHandler):
 
     def _init_opengl_embedding(self):
         """初始化OpenGL嵌入"""
-        # 创建OpenGL嵌入器
-        self._opengl_embedder = OpenGLEmbedder(self._render_width, self._render_height)
+        # 创建OpenGL嵌入器，传递已创建的纹理
+        self._opengl_embedder = OpenGLEmbedder(self._render_width, self._render_height, self._opengl_texture)
 
         # 初始化OpenGL嵌入器
         if not self._opengl_embedder.initialize():

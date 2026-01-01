@@ -10,9 +10,10 @@ import dearpygui.dearpygui as dpg
 class OpenGLEmbedder:
     """OpenGL嵌入器 - 在Dear PyGui中嵌入OpenGL渲染"""
 
-    def __init__(self, width: int = 800, height: int = 600):
+    def __init__(self, width: int = 800, height: int = 600, dpg_texture: Optional[int] = None):
         self._width = width
         self._height = height
+        self._dpg_texture = dpg_texture
 
         # OpenGL资源
         self._fbo = None  # 帧缓冲对象
@@ -20,7 +21,6 @@ class OpenGLEmbedder:
         self._rbo = None  # 渲染缓冲对象
 
         # Dear PyGui资源
-        self._dpg_texture = None
         self._dpg_image = None
 
         # GLFW窗口（隐藏的）
@@ -54,9 +54,6 @@ class OpenGLEmbedder:
 
             # 创建帧缓冲和纹理
             self._create_framebuffer()
-
-            # 创建Dear PyGui纹理
-            self._create_dpg_texture()
 
             self._initialized = True
             print("[OpenGL嵌入器] 初始化成功")
@@ -114,19 +111,7 @@ class OpenGLEmbedder:
         # 解绑帧缓冲
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
 
-    def _create_dpg_texture(self):
-        """创建Dear PyGui纹理"""
-        # 创建空的纹理数据
-        texture_data = np.zeros((self._height, self._width, 3), dtype=np.float32)
-        texture_data[:, :, :] = [0.1, 0.1, 0.1]  # 深灰色背景，归一化到0-1范围
 
-        # 添加纹理到Dear PyGui
-        self._dpg_texture = dpg.add_raw_texture(
-            width=self._width,
-            height=self._height,
-            default_value=texture_data.flatten(),
-            format=dpg.mvFormat_Float_rgb
-        )
 
     def begin_render(self):
         """开始渲染到帧缓冲"""
@@ -196,10 +181,6 @@ class OpenGLEmbedder:
         # 重新创建帧缓冲
         self._cleanup_framebuffer()
         self._create_framebuffer()
-
-        # 重新创建Dear PyGui纹理
-        self._cleanup_dpg_texture()
-        self._create_dpg_texture()
 
     def _cleanup_framebuffer(self):
         """清理帧缓冲资源"""
