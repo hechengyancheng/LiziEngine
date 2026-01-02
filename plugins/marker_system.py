@@ -86,9 +86,29 @@ class MarkerSystem:
                 m["vx"] += fx * move_factor
                 m["vy"] += fy * move_factor
 
-                # 使用速度更新浮点位置，并钳制在网格内
-                new_x = max(0.0, min(w - 1.0, x + m["vx"]))
-                new_y = max(0.0, min(h - 1.0, y + m["vy"]))
+                # 使用速度更新浮点位置，并处理边界反弹
+                tentative_x = x + m["vx"]
+                tentative_y = y + m["vy"]
+
+                # 处理x方向边界反弹
+                if tentative_x < 0.0:
+                    m["vx"] = -m["vx"]
+                    new_x = 0.0
+                elif tentative_x > w - 1.0:
+                    m["vx"] = -m["vx"]
+                    new_x = w - 1.0
+                else:
+                    new_x = tentative_x
+
+                # 处理y方向边界反弹
+                if tentative_y < 0.0:
+                    m["vy"] = -m["vy"]
+                    new_y = 0.0
+                elif tentative_y > h - 1.0:
+                    m["vy"] = -m["vy"]
+                    new_y = h - 1.0
+                else:
+                    new_y = tentative_y
 
                 # 在新位置创建微小向量影响
                 self.create_tiny_vector(grid, new_x, new_y, m.get("mag", 1.0))
@@ -148,7 +168,7 @@ class MarkerSystem:
 
         # 采样点：自身 + 上下左右
         sample_positions = [
-            #(x, y),
+            (x, y),
             (x - 1.0, y),
             (x + 1.0, y),
             (x, y - 1.0),
