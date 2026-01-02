@@ -80,7 +80,7 @@ class MarkerSystem:
 
             try:
                 # 计算标记自身及上下左右四个位置的向量合力
-                fx, fy = self.compute_force_from_neighbors(grid, x, y, use_fp32=True)
+                fx, fy = self.compute_force_from_neighbors(grid, x, y, use_fp32=False)
 
                 # 将合力作为速度（可通过 move_factor 缩放）
                 m["vx"] += fx * move_factor
@@ -127,7 +127,7 @@ class MarkerSystem:
         """在标记自身和上下左右四个位置拟合向量并相加，返回合力 (fx, fy)。
 
         说明：对自身以及上下左右四个浮点坐标位置分别调用拟合函数，将得到的向量逐一相加。
-        超出边界的位置会被钳制到网格范围内。
+        超出边界的位置会被忽略。
 
         Args:
             grid: 向量场网格
@@ -148,7 +148,7 @@ class MarkerSystem:
 
         # 采样点：自身 + 上下左右
         sample_positions = [
-            (x, y),
+            #(x, y),
             (x - 1.0, y),
             (x + 1.0, y),
             (x, y - 1.0),
@@ -159,21 +159,21 @@ class MarkerSystem:
         total_vy = 0.0
 
         for sx, sy in sample_positions:
-            # 钳制到合法范围
-            sx_clamped = max(0.0, min(w - 1.0, sx))
-            sy_clamped = max(0.0, min(h - 1.0, sy))
+            # 检查是否在边界内，如果超出则忽略
+            if not (0.0 <= sx <= w - 1.0 and 0.0 <= sy <= h - 1.0):
+                continue
 
             try:
                 if use_fp32:
-                    vx, vy = self.fit_vector_at_position_fp32(grid, sx_clamped, sy_clamped)
+                    vx, vy = self.fit_vector_at_position_fp32(grid, sx, sy)
                 else:
-                    vx, vy = self.fit_vector_at_position(grid, sx_clamped, sy_clamped)
+                    vx, vy = self.fit_vector_at_position(grid, sx, sy)
 
                 total_vx += float(vx)
                 total_vy += float(vy)
             except Exception as e:
                 # 保持容错，打印错误便于调试
-                print(f"Error fitting vector at ({sx_clamped}, {sy_clamped}): {e}")
+                print(f"Error fitting vector at ({sx}, {sy}): {e}")
                 continue
 
         return total_vx, total_vy
