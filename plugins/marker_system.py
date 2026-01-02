@@ -43,16 +43,22 @@ class MarkerSystem:
         """
         return list(self.markers)
 
-    def update_markers(self, grid: np.ndarray, move_factor: float = 1.0, clear_threshold: float = 1e-3) -> None:
+    def update_markers(self, grid: np.ndarray, dt: float = 1.0, move_factor: float = 1.0, clear_threshold: float = 1e-3, use_inertia: bool = False, damping: float = 1.0) -> None:
         """根据浮点坐标处拟合向量移动标记。
 
-        算法：在标记的浮点坐标处使用双线性插值拟合向量值，将标记按 fitted_v * move_factor 偏移。
+        改进点：
+        - 引入 `dt`（时间步长），使位移与时间尺度明确
+        - 对被动示踪子使用 RK2（midpoint）积分以提高精度
+        - 可选惯性模式（`use_inertia=True`）将把场视为加速度并保留粒子速度
+        - 延后对 `grid` 的修改：先计算所有新位置，再一次性调用 `create_tiny_vector`
 
         Args:
             grid: 向量场网格
-            neighborhood: 邻域大小（保留参数以保持兼容性）
-            move_factor: 移动因子
-            clear_threshold: 清除阈值，低于此拟合向量幅值的标记将被清除
+            dt: 时间步长
+            move_factor: 速度/加速度缩放因子
+            clear_threshold: 清除阈值（暂保留，用于潜在扩展）
+            use_inertia: 是否使用惯性粒子模型（场作为加速度）
+            damping: 惯性模式下的速度阻尼系数
         """
         if not hasattr(grid, "ndim"):
             return
@@ -73,46 +79,95 @@ class MarkerSystem:
 
         # 期望 grid 最后一维至少 2，代表 vx, vy
         new_markers = []
+        # 延迟对 grid 的修改，避免同一次更新周期中顺序依赖
+        pending_tiny_vectors = []  # list of (x, y, mag)
 
         for m in self.markers:
             x = m.get("x", 0.0)
             y = m.get("y", 0.0)
 
             try:
-                # 在浮点坐标处拟合向量值
-                fitted_vx, fitted_vy = self.fit_vector_at_position_fp32(grid, x, y)
-                '''
-                # 计算拟合向量的幅值
-                fitted_mag = np.sqrt(fitted_vx**2 + fitted_vy**2)
+                if not use_inertia:
+                    # 被动示踪子：使用 RK2（midpoint）积分
+                    v1x, v1y = self.fit_vector_at_position_fp32(grid, x, y)
+                    v1x *= move_factor
+                    v1y *= move_factor
 
-                # 如果拟合向量幅值低于阈值，自动移除该标记
-                if fitted_mag < clear_threshold:
-                    continue
-                '''
+                    mx = x + 0.5 * dt * v1x
+                    my = y + 0.5 * dt * v1y
+                    mx = max(0.0, min(w - 1.0, mx))
+                    my = max(0.0, min(h - 1.0, my))
 
-                # 设置标记的速度属性
-                m["vx"] = fitted_vx * move_factor
-                m["vy"] = fitted_vy * move_factor
+                    v2x, v2y = self.fit_vector_at_position_fp32(grid, mx, my)
+                    v2x *= move_factor
+                    v2y *= move_factor
 
-                # 使用速度更新浮点位置
-                new_x = max(0.0, min(w - 1.0, x + m["vx"]))
-                new_y = max(0.0, min(h - 1.0, y + m["vy"]))
+                    # 简单的局部子步：若单步位移过大则分多子步积分
+                    max_disp = np.hypot(v2x, v2y) * dt
+                    if max_disp > 1.0:
+                        n_sub = int(np.ceil(max_disp))
+                        dt_sub = dt / n_sub
+                        curx, cury = x, y
+                        for _ in range(n_sub):
+                            sv1x, sv1y = self.fit_vector_at_position_fp32(grid, curx, cury)
+                            sv1x *= move_factor
+                            sv1y *= move_factor
+                            midx = curx + 0.5 * dt_sub * sv1x
+                            midy = cury + 0.5 * dt_sub * sv1y
+                            midx = max(0.0, min(w - 1.0, midx))
+                            midy = max(0.0, min(h - 1.0, midy))
+                            sv2x, sv2y = self.fit_vector_at_position_fp32(grid, midx, midy)
+                            sv2x *= move_factor
+                            sv2y *= move_factor
+                            curx = curx + dt_sub * sv2x
+                            cury = cury + dt_sub * sv2y
+                        new_x = max(0.0, min(w - 1.0, curx))
+                        new_y = max(0.0, min(h - 1.0, cury))
+                        vx = (new_x - x) / dt
+                        vy = (new_y - y) / dt
+                    else:
+                        new_x = max(0.0, min(w - 1.0, x + v2x * dt))
+                        new_y = max(0.0, min(h - 1.0, y + v2y * dt))
+                        vx, vy = v2x, v2y
 
-                # 创建微小向量影响
-                self.create_tiny_vector(grid, new_x, new_y, m["mag"])
+                    m["vx"] = float(vx)
+                    m["vy"] = float(vy)
+                    m["x"] = float(new_x)
+                    m["y"] = float(new_y)
+                    pending_tiny_vectors.append((new_x, new_y, m.get("mag", 1.0)))
+                    new_markers.append(m)
 
-                m["x"] = new_x
-                m["y"] = new_y
-                new_markers.append(m)
+                else:
+                    # 惯性粒子：将场视为加速度源（a），保留并更新粒子速度
+                    ax, ay = self.fit_vector_at_position_fp32(grid, x, y)
+                    ax *= move_factor
+                    ay *= move_factor
+                    pvx = m.get("vx", 0.0) + ax * dt
+                    pvy = m.get("vy", 0.0) + ay * dt
+                    pvx *= damping
+                    pvy *= damping
+                    new_x = max(0.0, min(w - 1.0, x + pvx * dt))
+                    new_y = max(0.0, min(h - 1.0, y + pvy * dt))
+                    m["vx"] = float(pvx)
+                    m["vy"] = float(pvy)
+                    m["x"] = float(new_x)
+                    m["y"] = float(new_y)
+                    pending_tiny_vectors.append((new_x, new_y, m.get("mag", 1.0)))
+                    new_markers.append(m)
 
             except Exception as e:
-                # 添加更详细的错误日志
                 print(f"Error updating marker at ({x}, {y}): {str(e)}")
-                # 保留标记以便后续检查
                 new_markers.append(m)
                 continue
 
-        # 更新内部标记列表并写回 state_manager 以便界面绘制或外部使用
+        # 一次性把微小向量影响应用到网格，避免本帧内的顺序依赖
+        for px, py, pmag in pending_tiny_vectors:
+            try:
+                self.create_tiny_vector(grid, px, py, pmag)
+            except Exception:
+                pass
+
+        # 更新内部标记列表并写回 state_manager
         self.markers = new_markers
         self._sync_to_state_manager()
 

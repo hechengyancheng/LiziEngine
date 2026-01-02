@@ -100,13 +100,14 @@ def main():
 
         # 更新标记位置（可选）
         try:
-            ui_manager.update_markers(grid)
-            
-            #给每个标记添加重力向量
+            # 传入时间步长 dt（与 MarkerSystem.update_markers 新签名兼容）
+            ui_manager.update_markers(grid, dt=0.5, move_factor=1.0)
+
+            # 给每个标记添加重力向量（示例：向下的小加速）
             markers = marker_system.get_markers()
             for marker in markers:
-                marker_system.add_vector_at_position(grid, x=marker["x"], y=marker["y"], vy= 0.1, vx=0.0)
-            
+                marker_system.add_vector_at_position(grid, x=marker["x"], y=marker["y"], vy=0.1, vx=0.0)
+
         except Exception as e:
             print(f"[错误] 更新标记异常: {e}")
 

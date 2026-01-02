@@ -192,14 +192,16 @@ class UIManager:
 
             window._scroll_y = 0
 
-    def update_markers(self, grid: np.ndarray, move_factor: float = 1.0, clear_threshold: float = 1e-3):
-        """使用标记系统更新标记位置
+    def update_markers(self, grid: np.ndarray, dt: float = 1.0, move_factor: float = 1.0, clear_threshold: float = 1e-3, use_inertia: bool = False, damping: float = 1.0):
+        """使用标记系统更新标记位置（兼容新版 MarkerSystem）
 
         Args:
             grid: 向量场网格
-            neighborhood: 邻域大小
-            move_factor: 移动因子
-            clear_threshold: 清除阈值，低于此平均幅值的标记将被清除
+            dt: 时间步长
+            move_factor: 速度/加速度缩放因子
+            clear_threshold: 清除阈值
+            use_inertia: 是否使用惯性粒子模型
+            damping: 惯性模式下的速度阻尼系数
         """
-        self.marker_system.update_markers(grid, move_factor, clear_threshold)
+        self.marker_system.update_markers(grid, dt=dt, move_factor=move_factor, clear_threshold=clear_threshold, use_inertia=use_inertia, damping=damping)
 
