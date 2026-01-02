@@ -22,7 +22,7 @@
             "weight": 0.0
         },
         "neighbor": {
-            "weight": 0.25
+            "weight": 0.0
         }
     },
     "cam": {

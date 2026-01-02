@@ -79,36 +79,26 @@ class MarkerSystem:
             y = m.get("y", 0.0)
 
             try:
-                # 在浮点坐标处拟合向量值
-                fitted_vx, fitted_vy = self.fit_vector_at_position_fp32(grid, x, y)
-                '''
-                # 计算拟合向量的幅值
-                fitted_mag = np.sqrt(fitted_vx**2 + fitted_vy**2)
+                # 计算标记自身及上下左右四个位置的向量合力
+                fx, fy = self.compute_force_from_neighbors(grid, x, y, use_fp32=True)
 
-                # 如果拟合向量幅值低于阈值，自动移除该标记
-                if fitted_mag < clear_threshold:
-                    continue
-                '''
+                # 将合力作为速度（可通过 move_factor 缩放）
+                m["vx"] += fx * move_factor
+                m["vy"] += fy * move_factor
 
-                # 设置标记的速度属性
-                m["vx"] = fitted_vx * move_factor
-                m["vy"] = fitted_vy * move_factor
-
-                # 使用速度更新浮点位置
+                # 使用速度更新浮点位置，并钳制在网格内
                 new_x = max(0.0, min(w - 1.0, x + m["vx"]))
                 new_y = max(0.0, min(h - 1.0, y + m["vy"]))
 
-                # 创建微小向量影响
-                self.create_tiny_vector(grid, new_x, new_y, m["mag"])
+                # 在新位置创建微小向量影响
+                self.create_tiny_vector(grid, new_x, new_y, m.get("mag", 1.0))
 
                 m["x"] = new_x
                 m["y"] = new_y
                 new_markers.append(m)
 
             except Exception as e:
-                # 添加更详细的错误日志
                 print(f"Error updating marker at ({x}, {y}): {str(e)}")
-                # 保留标记以便后续检查
                 new_markers.append(m)
                 continue
 
@@ -132,6 +122,61 @@ class MarkerSystem:
     def fit_vector_at_position_fp32(self, grid: np.ndarray, x: float, y: float) -> Tuple[float, float]:
         # 在指定位置拟合一个向量
         return self.vector_calculator.fit_vector_at_position_fp32(grid, x, y)
+
+    def compute_force_from_neighbors(self, grid: np.ndarray, x: float, y: float, use_fp32: bool = True) -> Tuple[float, float]:
+        """在标记自身和上下左右四个位置拟合向量并相加，返回合力 (fx, fy)。
+
+        说明：对自身以及上下左右四个浮点坐标位置分别调用拟合函数，将得到的向量逐一相加。
+        超出边界的位置会被钳制到网格范围内。
+
+        Args:
+            grid: 向量场网格
+            x: 标记的浮点 x 坐标
+            y: 标记的浮点 y 坐标
+            use_fp32: 是否使用 fp32 快速拟合接口（默认 True）
+
+        Returns:
+            (fx, fy): 合力向量分量
+        """
+        # 基本校验
+        if not hasattr(grid, "ndim"):
+            return 0.0, 0.0
+        if grid.ndim < 3 or grid.shape[2] < 2:
+            return 0.0, 0.0
+
+        h, w = grid.shape[0], grid.shape[1]
+
+        # 采样点：自身 + 上下左右
+        sample_positions = [
+            (x, y),
+            (x - 1.0, y),
+            (x + 1.0, y),
+            (x, y - 1.0),
+            (x, y + 1.0),
+        ]
+
+        total_vx = 0.0
+        total_vy = 0.0
+
+        for sx, sy in sample_positions:
+            # 钳制到合法范围
+            sx_clamped = max(0.0, min(w - 1.0, sx))
+            sy_clamped = max(0.0, min(h - 1.0, sy))
+
+            try:
+                if use_fp32:
+                    vx, vy = self.fit_vector_at_position_fp32(grid, sx_clamped, sy_clamped)
+                else:
+                    vx, vy = self.fit_vector_at_position(grid, sx_clamped, sy_clamped)
+
+                total_vx += float(vx)
+                total_vy += float(vy)
+            except Exception as e:
+                # 保持容错，打印错误便于调试
+                print(f"Error fitting vector at ({sx_clamped}, {sy_clamped}): {e}")
+                continue
+
+        return total_vx, total_vy
 
     def _sync_to_state_manager(self) -> None:
         """将标记列表同步到状态管理器"""
