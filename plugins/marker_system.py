@@ -43,7 +43,7 @@ class MarkerSystem:
         """
         return list(self.markers)
 
-    def update_markers(self, grid: np.ndarray, move_factor: float = 1.0, clear_threshold: float = 1e-3) -> None:
+    def update_markers(self, grid: np.ndarray, move_factor: float = 1.0, clear_threshold: float = 1e-3, damping_factor: float = 0.99) -> None:
         """根据浮点坐标处拟合向量移动标记。
 
         算法：在标记的浮点坐标处使用双线性插值拟合向量值，将标记按 fitted_v * move_factor 偏移。
@@ -53,6 +53,7 @@ class MarkerSystem:
             neighborhood: 邻域大小（保留参数以保持兼容性）
             move_factor: 移动因子
             clear_threshold: 清除阈值，低于此拟合向量幅值的标记将被清除
+            damping_factor: 速度阻尼因子，用于模拟摩擦（默认0.99）
         """
         if not hasattr(grid, "ndim"):
             return
@@ -87,8 +88,12 @@ class MarkerSystem:
                 m["fy"] = fy
 
                 # 将合力作为速度（可通过 move_factor 缩放）
-                m["vx"] += fx 
-                m["vy"] += fy 
+                m["vx"] += fx
+                m["vy"] += fy
+
+                # 应用速度阻尼因子模拟摩擦
+                m["vx"] *= damping_factor
+                m["vy"] *= damping_factor
 
                 # 使用速度更新浮点位置，并处理边界反弹
                 tentative_x = x + m["vx"] * move_factor

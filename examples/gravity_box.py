@@ -104,8 +104,8 @@ def main():
             markers = marker_system.get_markers()
             for marker in markers:
                 marker_system.add_vector_at_position(grid, x=marker["x"], y=marker["y"], vy= 0.1, vx=0.0)
-                #摩擦向量
-                marker_system.add_vector_at_position(grid, x=marker["x"], y=marker["y"], vy= -0.01 * marker["vy"], vx=-0.01 * marker["vx"])
+                # 摩擦向量已移至 marker_system.update_markers 中通过速度阻尼实现
+                pass
 
             ui_manager.update_markers(grid)
             
