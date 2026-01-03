@@ -80,7 +80,7 @@ class MarkerSystem:
 
             try:
                 # 计算标记自身及圆形范围内（半径1.0）的向量合力
-                fx, fy = self.compute_force_from_neighbors(grid, x, y, use_fp32=False, radius=1.0)
+                fx, fy = self.compute_force_from_neighbors(grid, x, y, use_fp32=False, radius=10.0)
 
                 # 存储合力向量用于渲染
                 m["fx"] = fx
@@ -119,7 +119,7 @@ class MarkerSystem:
                     new_y = tentative_y
 
                 # 在新位置创建圆形向量场影响
-                self.create_vector_field_at_position(grid, new_x, new_y, m.get("mag", 1.0), radius=1.0)
+                self.create_vector_field_at_position(grid, new_x, new_y, m.get("mag", 1.0), radius=10.0)
 
                 m["x"] = new_x
                 m["y"] = new_y
@@ -159,23 +159,25 @@ class MarkerSystem:
 
         h, w = grid.shape[0], grid.shape[1]
 
-        # 采样点：中心 + 圆周上8个点（每45度一个）
-        angles = np.linspace(0, 2 * np.pi, 9)[:-1]  # 0到315度
-        sample_positions = [(x, y)] + [(x + radius * np.cos(angle), y + radius * np.sin(angle)) for angle in angles]
+        # 计算边界框
+        min_x = max(0, int(x - radius))
+        max_x = min(w - 1, int(x + radius) + 1)
+        min_y = max(0, int(y - radius))
+        max_y = min(h - 1, int(y + radius) + 1)
 
-        for sx, sy in sample_positions:
-            # 检查边界
-            if not (0.0 <= sx <= w - 1.0 and 0.0 <= sy <= h - 1.0):
-                continue
-
-            # 计算从中心到采样点的向量方向
-            dx = sx - x
-            dy = sy - y
-            dist = np.sqrt(dx**2 + dy**2)
-            if dist > 0:
-                vx = (dx / dist) * mag
-                vy = (dy / dist) * mag
-                self.add_vector_at_position(grid, sx, sy, vx, vy)
+        # 遍历边界框内的所有整数网格点
+        for ix in range(min_x, max_x):
+            for iy in range(min_y, max_y):
+                # 检查是否在圆内
+                dx = ix - x
+                dy = iy - y
+                dist_sq = dx**2 + dy**2
+                if dist_sq <= radius**2:
+                    dist = np.sqrt(dist_sq)
+                    if dist > 0:
+                        vx = (dx / dist) * mag
+                        vy = (dy / dist) * mag
+                        self.add_vector_at_position(grid, float(ix), float(iy), vx, vy)
         
 
     def fit_vector_at_position(self, grid: np.ndarray, x: float, y: float) -> Tuple[float, float]:
@@ -189,7 +191,7 @@ class MarkerSystem:
     def compute_force_from_neighbors(self, grid: np.ndarray, x: float, y: float, use_fp32: bool = True, radius: float = 1.0) -> Tuple[float, float]:
         """遍历圆形范围内向量值并相加，返回合力 (fx, fy)。
 
-        说明：对中心及圆周上多个浮点坐标位置分别调用拟合函数，将得到的向量逐一相加。
+        说明：对圆形范围内所有网格点分别调用拟合函数，将得到的向量逐一相加。
         超出边界的位置会被忽略。
 
         Args:
@@ -210,30 +212,39 @@ class MarkerSystem:
 
         h, w = grid.shape[0], grid.shape[1]
 
-        # 采样点：中心 + 圆周上8个点（每45度一个）
-        angles = np.linspace(0, 2 * np.pi, 9)[:-1]  # 0到315度
-        sample_positions = [(x, y)] + [(x + radius * np.cos(angle), y + radius * np.sin(angle)) for angle in angles]
+        # 计算边界框
+        min_x = max(0, int(x - radius))
+        max_x = min(w - 1, int(x + radius) + 1)
+        min_y = max(0, int(y - radius))
+        max_y = min(h - 1, int(y + radius) + 1)
 
         total_vx = 0.0
         total_vy = 0.0
 
-        for sx, sy in sample_positions:
-            # 检查是否在边界内，如果超出则忽略
-            if not (0.0 <= sx <= w - 1.0 and 0.0 <= sy <= h - 1.0):
-                continue
+        # 遍历边界框内的所有整数网格点
+        for ix in range(min_x, max_x):
+            for iy in range(min_y, max_y):
+                # 检查是否在圆内
+                dx = ix - x
+                dy = iy - y
+                dist_sq = dx**2 + dy**2
+                if dist_sq <= radius**2:
+                    # 检查是否在边界内
+                    if not (0.0 <= ix <= w - 1.0 and 0.0 <= iy <= h - 1.0):
+                        continue
 
-            try:
-                if use_fp32:
-                    vx, vy = self.fit_vector_at_position_fp32(grid, sx, sy)
-                else:
-                    vx, vy = self.fit_vector_at_position(grid, sx, sy)
+                    try:
+                        if use_fp32:
+                            vx, vy = self.fit_vector_at_position_fp32(grid, float(ix), float(iy))
+                        else:
+                            vx, vy = self.fit_vector_at_position(grid, float(ix), float(iy))
 
-                total_vx += float(vx)
-                total_vy += float(vy)
-            except Exception as e:
-                # 保持容错，打印错误便于调试
-                print(f"Error fitting vector at ({sx}, {sy}): {e}")
-                continue
+                        total_vx += float(vx)
+                        total_vy += float(vy)
+                    except Exception as e:
+                        # 保持容错，打印错误便于调试
+                        print(f"Error fitting vector at ({ix}, {iy}): {e}")
+                        continue
 
         return total_vx, total_vy
 
