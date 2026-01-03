@@ -100,14 +100,14 @@ def main():
 
         # 更新标记位置（可选）
         try:
-            ui_manager.update_markers(grid)
-            
             #给每个标记添加重力向量
             markers = marker_system.get_markers()
             for marker in markers:
-                marker_system.add_vector_at_position(grid, x=marker["x"], y=marker["y"], vy= 10.0, vx=0.0)
+                marker_system.add_vector_at_position(grid, x=marker["x"], y=marker["y"], vy= 0.1, vx=0.0)
                 #摩擦向量
-                marker_system.add_vector_at_position(grid, x=marker["x"], y=marker["y"], vy= -0.1 * marker["vy"], vx=-0.1 * marker["vx"])
+                marker_system.add_vector_at_position(grid, x=marker["x"], y=marker["y"], vy= -0.01 * marker["vy"], vx=-0.01 * marker["vx"])
+
+            ui_manager.update_markers(grid)
             
         except Exception as e:
             print(f"[错误] 更新标记异常: {e}")
