@@ -343,10 +343,10 @@ class VectorFieldRenderer(EventHandler):
         # 清除颜色和深度缓冲
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-    def render_markers(self, cell_size: float = 1.0,
+    def render_markers(self, grid: np.ndarray = None, cell_size: float = 1.0,
                        cam_x: float = 0.0, cam_y: float = 0.0, cam_zoom: float = 1.0,
                        viewport_width: int = 800, viewport_height: int = 600) -> None:
-        """渲染在 state_manager 中注册的标记（点）"""
+        """渲染在 state_manager 中注册的标记（点和合力线）"""
         if not self._initialized:
             self.initialize()
 
@@ -406,6 +406,37 @@ class VectorFieldRenderer(EventHandler):
 
         # 绘制点
         glDrawArrays(GL_POINTS, 0, len(markers))
+
+        # 渲染合力线（绿色）
+        force_lines = []
+        for m in markers:
+            try:
+                gx = float(m.get("x", 0.0))
+                gy = float(m.get("y", 0.0))
+                fx = float(m.get("fx", 0.0))
+                fy = float(m.get("fy", 0.0))
+            except Exception:
+                continue
+
+            # 起点：标记位置
+            start_x = gx * cell_size
+            start_y = gy * cell_size
+
+            # 终点：标记位置 + 合力向量（缩放以便可视化）
+            force_scale = self._config_manager.get("force.line_scale", 1.0)
+            end_x = start_x + fx * force_scale
+            end_y = start_y + fy * force_scale
+
+            # 添加到线条顶点列表 (起点和终点，每个点5个分量)
+            force_lines.extend([start_x, start_y, 0.0, 1.0, 0.0])  # 绿色
+            force_lines.extend([end_x, end_y, 0.0, 1.0, 0.0])      # 绿色
+
+        if force_lines:
+            # 上传合力线顶点数据
+            glBufferData(GL_ARRAY_BUFFER, len(force_lines) * 4, np.array(force_lines, dtype=np.float32), GL_DYNAMIC_DRAW)
+
+            # 绘制线条
+            glDrawArrays(GL_LINES, 0, len(force_lines) // 5)
 
         # 清理绑定
         glBindVertexArray(0)

@@ -82,6 +82,10 @@ class MarkerSystem:
                 # 计算标记自身及圆形范围内（半径1.0）的向量合力
                 fx, fy = self.compute_force_from_neighbors(grid, x, y, use_fp32=False, radius=1.0)
 
+                # 存储合力向量用于渲染
+                m["fx"] = fx
+                m["fy"] = fy
+
                 # 将合力作为速度（可通过 move_factor 缩放）
                 m["vx"] += fx * move_factor
                 m["vy"] += fy * move_factor
