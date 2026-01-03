@@ -192,7 +192,7 @@ class UIManager:
 
             window._scroll_y = 0
 
-    def update_markers(self, grid: np.ndarray, move_factor: float = 0.1, clear_threshold: float = 1e-3):
+    def update_markers(self, grid: np.ndarray, move_factor: float = 0.001, clear_threshold: float = 1e-3):
         """使用标记系统更新标记位置
 
         Args:
