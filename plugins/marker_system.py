@@ -71,64 +71,69 @@ class MarkerSystem:
 
         h, w = grid.shape[0], grid.shape[1]
 
-        # 期望 grid 最后一维至少 2，代表 vx, vy
-        new_markers = []
-
+        # 第一阶段：计算所有标记的合力向量（基于当前网格状态）
+        forces = []
         for m in self.markers:
             x = m.get("x", 0.0)
             y = m.get("y", 0.0)
-
             try:
-                # 计算标记自身及圆形范围内（半径1.0）的向量合力
                 fx, fy = self.compute_force_from_neighbors(grid, x, y, use_fp32=False, radius=10.0)
-
-                # 存储合力向量用于渲染
-                m["fx"] = fx
-                m["fy"] = fy
-
-                # 将合力作为速度（可通过 move_factor 缩放）
-                m["vx"] += fx
-                m["vy"] += fy
-
-                # 应用速度阻尼因子模拟摩擦
-                m["vx"] *= damping_factor
-                m["vy"] *= damping_factor
-
-                # 使用速度更新浮点位置，并处理边界反弹
-                tentative_x = x + m["vx"] * move_factor
-                tentative_y = y + m["vy"] * move_factor
-
-                # 处理x方向边界反弹
-                if tentative_x < 0.0:
-                    m["vx"] = -m["vx"]
-                    new_x = 0.0
-                elif tentative_x > w - 1.0:
-                    m["vx"] = -m["vx"]
-                    new_x = w - 1.0
-                else:
-                    new_x = tentative_x
-
-                # 处理y方向边界反弹
-                if tentative_y < 0.0:
-                    m["vy"] = -m["vy"]
-                    new_y = 0.0
-                elif tentative_y > h - 1.0:
-                    m["vy"] = -m["vy"]
-                    new_y = h - 1.0
-                else:
-                    new_y = tentative_y
-
-                # 在新位置创建圆形向量场影响
-                self.create_vector_field_at_position(grid, new_x, new_y, m.get("mag", 1.0), radius=10.0)
-
-                m["x"] = new_x
-                m["y"] = new_y
-                new_markers.append(m)
-
+                forces.append((fx, fy))
             except Exception as e:
-                print(f"Error updating marker at ({x}, {y}): {str(e)}")
-                new_markers.append(m)
-                continue
+                print(f"Error computing force for marker at ({x}, {y}): {str(e)}")
+                forces.append((0.0, 0.0))
+
+        # 第二阶段：根据合力更新所有标记的位置和速度
+        new_markers = []
+        for i, m in enumerate(self.markers):
+            fx, fy = forces[i]
+
+            # 存储合力向量用于渲染
+            m["fx"] = fx
+            m["fy"] = fy
+
+            # 将合力作为速度（可通过 move_factor 缩放）
+            m["vx"] += fx
+            m["vy"] += fy
+
+            # 应用速度阻尼因子模拟摩擦
+            m["vx"] *= damping_factor
+            m["vy"] *= damping_factor
+
+            # 使用速度更新浮点位置，并处理边界反弹
+            tentative_x = m["x"] + m["vx"] * move_factor
+            tentative_y = m["y"] + m["vy"] * move_factor
+
+            # 处理x方向边界反弹
+            if tentative_x < 0.0:
+                m["vx"] = -m["vx"]
+                new_x = 0.0
+            elif tentative_x > w - 1.0:
+                m["vx"] = -m["vx"]
+                new_x = w - 1.0
+            else:
+                new_x = tentative_x
+
+            # 处理y方向边界反弹
+            if tentative_y < 0.0:
+                m["vy"] = -m["vy"]
+                new_y = 0.0
+            elif tentative_y > h - 1.0:
+                m["vy"] = -m["vy"]
+                new_y = h - 1.0
+            else:
+                new_y = tentative_y
+
+            m["x"] = new_x
+            m["y"] = new_y
+            new_markers.append(m)
+
+        # 第三阶段：在所有标记的新位置创建向量场影响
+        for m in new_markers:
+            try:
+                self.create_vector_field_at_position(grid, m["x"], m["y"], m.get("mag", 1.0), radius=10.0)
+            except Exception as e:
+                print(f"Error creating vector field for marker at ({m['x']}, {m['y']}): {str(e)}")
 
         # 更新内部标记列表并写回 state_manager 以便界面绘制或外部使用
         self.markers = new_markers
