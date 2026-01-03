@@ -87,12 +87,12 @@ class MarkerSystem:
                 m["fy"] = fy
 
                 # 将合力作为速度（可通过 move_factor 缩放）
-                m["vx"] += fx * move_factor
-                m["vy"] += fy * move_factor
+                m["vx"] += fx 
+                m["vy"] += fy 
 
                 # 使用速度更新浮点位置，并处理边界反弹
-                tentative_x = x + m["vx"]
-                tentative_y = y + m["vy"]
+                tentative_x = x + m["vx"] * move_factor
+                tentative_y = y + m["vy"] * move_factor
 
                 # 处理x方向边界反弹
                 if tentative_x < 0.0:
