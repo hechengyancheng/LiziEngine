@@ -81,14 +81,6 @@ class MarkerSystem:
             try:
                 # 在浮点坐标处拟合向量值
                 fitted_vx, fitted_vy = self.fit_vector_at_position_fp32(grid, x, y)
-                '''
-                # 计算拟合向量的幅值
-                fitted_mag = np.sqrt(fitted_vx**2 + fitted_vy**2)
-
-                # 如果拟合向量幅值低于阈值，自动移除该标记
-                if fitted_mag < clear_threshold:
-                    continue
-                '''
 
                 # 设置标记的速度属性
                 m["vx"] += fitted_vx * move_factor
