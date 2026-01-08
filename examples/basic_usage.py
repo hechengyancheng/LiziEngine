@@ -44,7 +44,7 @@ def main():
         return
 
     # 获取网格
-    grid = app_core.grid_manager.init_grid(640, 480)
+    grid = app_core.grid_manager.init_grid(64, 64)
 
     # 设置示例向量场 - 创建旋转模式
     vector_calculator.create_tangential_pattern(grid, magnitude=1.0)

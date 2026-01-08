@@ -80,7 +80,7 @@ class MarkerSystem:
 
             try:
                 # 在浮点坐标处拟合向量值
-                fitted_vx, fitted_vy = self.fit_vector_at_position_fp32(grid, x, y)
+                fitted_vx, fitted_vy = self.fit_vector_at_position(grid, x, y)
 
                 # 设置标记的速度属性
                 m["vx"] += fitted_vx * move_factor
