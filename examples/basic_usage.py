@@ -84,9 +84,8 @@ def main():
         # 更新窗口和处理 UI 事件
         window.update()
 
-        # 实时更新向量场（如果启用）
-        if ui_manager.enable_update:
-            vector_calculator.update_grid_with_adjacent_sum(grid)
+        # 清空网格       
+        grid.fill(0.0)
 
         # 处理鼠标拖动与滚轮
         try:
@@ -101,6 +100,10 @@ def main():
             ui_manager.update_markers(grid)
         except Exception as e:
             print(f"[错误] 更新标记异常: {e}")
+
+        # 实时更新向量场（如果启用）
+        if ui_manager.enable_update:
+            vector_calculator.update_grid_with_adjacent_sum(grid)
 
         # 渲染
         window.render(grid)
