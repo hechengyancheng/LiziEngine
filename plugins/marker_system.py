@@ -75,34 +75,39 @@ class MarkerSystem:
         new_markers = []
 
         for m in self.markers:
-            x = m.get("x", 0.0)
-            y = m.get("y", 0.0)
-
+            x = m["x"]
+            y = m["y"]
+            mag = m["mag"]
+            vx = m["vx"]
+            vy = m["vy"]
+            #self.create_tiny_vector(grid, x, y, mag)
             try:
                 # 在浮点坐标处拟合向量值
-                fitted_vx, fitted_vy = self.fit_vector_at_position_fp32(grid, x, y)
-                '''
-                # 计算拟合向量的幅值
-                fitted_mag = np.sqrt(fitted_vx**2 + fitted_vy**2)
-
-                # 如果拟合向量幅值低于阈值，自动移除该标记
-                if fitted_mag < clear_threshold:
-                    continue
-                '''
+                fitted_vx, fitted_vy = self.fit_vector_at_position(grid, x, y)
 
                 # 设置标记的速度属性
-                m["vx"] = fitted_vx * move_factor
-                m["vy"] = fitted_vy * move_factor
+                vx += fitted_vx * mag
+                vy += fitted_vy * mag
 
-                # 使用速度更新浮点位置
-                new_x = max(0.0, min(w - 1.0, x + m["vx"]))
-                new_y = max(0.0, min(h - 1.0, y + m["vy"]))
+                # 边缘反弹逻辑
+                tentative_x = x + vx * move_factor
+                if tentative_x < 0 or tentative_x > w - 1:
+                    vx = -vx
+                tentative_y = y + vy * move_factor
+                if tentative_y < 0 or tentative_y > h - 1:
+                    vy = -vy
+
+                # 使用速度更新浮点位置（带反弹后的速度）
+                new_x = max(0.0, min(w - 1.0, x + vx * move_factor))
+                new_y = max(0.0, min(h - 1.0, y + vy * move_factor))
 
                 # 创建微小向量影响
-                self.create_tiny_vector(grid, new_x, new_y, m["mag"])
+                self.create_tiny_vector(grid, new_x, new_y, mag)
 
                 m["x"] = new_x
                 m["y"] = new_y
+                m["vx"] = vx
+                m["vy"] = vy
                 new_markers.append(m)
 
             except Exception as e:

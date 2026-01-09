@@ -158,6 +158,11 @@ class Controller:
                 # 计算从标记到鼠标位置的方向向量
                 vx = gx - selected_marker["x"]
                 vy = gy - selected_marker["y"]
+                # 归一化向量
+                vec_len = (vx ** 2 + vy ** 2) ** 0.5
+                if vec_len > 0:
+                    vx /= vec_len
+                    vy /= vec_len
 
                 # 使用微小向量创建函数
                 self.marker_system.add_vector_at_position(self.grid, x=selected_marker["x"], y=selected_marker["y"], vx=vx, vy=vy)
