@@ -13,7 +13,7 @@
     "cam_x": 0.0,
     "cam_y": 0.0,
     "cam_zoom": 1.0,
-    "show_grid": true,
+    "show_grid": false,
     "grid_color": [
         0.3,
         0.3,

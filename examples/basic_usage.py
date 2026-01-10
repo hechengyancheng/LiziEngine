@@ -16,6 +16,7 @@ from lizi_engine.compute.vector_field import vector_calculator
 from plugins.ui import UIManager
 from plugins.controller import Controller
 from plugins.marker_system import MarkerSystem
+from plugins.toolkit import add_inward_edge_vectors
 
 def main():
     """主函数"""
@@ -98,6 +99,7 @@ def main():
         # 实时更新向量场（如果启用）
         if ui_manager.enable_update:
             vector_calculator.update_grid_with_adjacent_sum(grid)
+            add_inward_edge_vectors(grid, magnitude=0.5)
 
         # 更新标记位置（可选）
         try:
