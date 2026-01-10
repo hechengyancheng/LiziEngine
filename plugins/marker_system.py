@@ -16,17 +16,16 @@ class MarkerSystem:
         # 标记列表，存储浮点网格坐标 {'x':float,'y':float,'mag':float,'vx':float,'vy':float}
         self.markers = []
 
-    def add_marker(self, x: float, y: float, mag: float = 1.0, vx: float = 0.0, vy: float = 0.0) -> None:
+    def add_marker(self, x: float, y: float, mag: float = 1.0, v: float = 0.0) -> None:
         """添加一个新标记
 
         Args:
             x: 标记的x坐标（浮点）
             y: 标记的y坐标（浮点）
             mag: 标记的初始幅值（可选）
-            vx: 标记的x方向速度（可选）
-            vy: 标记的y方向速度（可选）
+            v: 标记的速度（可选）
         """
-        marker = {"x": float(x), "y": float(y), "mag": float(mag), "vx": float(vx), "vy": float(vy)}
+        marker = {"x": float(x), "y": float(y), "mag": float(mag), "v": float(v)}
         self.markers.append(marker)
         self._sync_to_state_manager()
 
@@ -77,23 +76,21 @@ class MarkerSystem:
             x = m["x"]
             y = m["y"]
             mag = m["mag"]
-            vx = m["vx"]
-            vy = m["vy"]
+            v = m["v"]
             #self.create_tiny_vector(grid, x, y, mag)
             try:
                 # 在浮点坐标处拟合向量值
                 fitted_vx, fitted_vy = self.fit_vector_at_position(grid, x, y)
-
+                v = (fitted_vx ** 2 + fitted_vy ** 2) ** 0.5
+                
                 # 设置标记的速度属性
-                if fitted_vx > 0.001 or fitted_vx < -0.001:
-                    vx = fitted_vx * mag
-                if fitted_vy < -0.001 or fitted_vy > 0.001:    
-                    vy = fitted_vy * mag
+                if v >= 0.001:
+                    x += fitted_vx * mag 
+                    y += fitted_vy * mag
 
                 # 存储拟合向量用于渲染
                 m["fitted_vx"] = fitted_vx
                 m["fitted_vy"] = fitted_vy
-
                 # 使用速度更新浮点位置（带反弹后的速度）
                 new_x = max(0.0, min(w - 1.0, x + vx * dt))
                 new_y = max(0.0, min(h - 1.0, y + vy * dt))
