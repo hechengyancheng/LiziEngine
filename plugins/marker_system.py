@@ -85,8 +85,10 @@ class MarkerSystem:
                 fitted_vx, fitted_vy = self.fit_vector_at_position(grid, x, y)
 
                 # 设置标记的速度属性
-                vx += fitted_vx * mag
-                vy += fitted_vy * mag
+                if fitted_vx > 0.01 or fitted_vx < -0.01:
+                    vx += fitted_vx * mag
+                if fitted_vy < -0.01 or fitted_vy > 0.01:    
+                    vy += fitted_vy * mag
 
                 # 存储拟合向量用于渲染
                 m["fitted_vx"] = fitted_vx
