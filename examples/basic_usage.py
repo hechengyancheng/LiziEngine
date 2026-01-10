@@ -45,10 +45,10 @@ def main():
         return
 
     # 获取网格
-    grid = app_core.grid_manager.init_grid(64, 64)
+    grid = app_core.grid_manager.init_grid(640, 640)
 
     # 设置示例向量场 - 创建旋转模式
-    vector_calculator.create_tangential_pattern(grid, magnitude=1.0)
+    vector_calculator.create_tangential_pattern(grid, magnitude=0.1)
 
     # 初始化视图
     try:
@@ -99,7 +99,7 @@ def main():
         # 实时更新向量场（如果启用）
         if ui_manager.enable_update:
             vector_calculator.update_grid_with_adjacent_sum(grid)
-            add_inward_edge_vectors(grid, magnitude=0.5)
+            add_inward_edge_vectors(grid, magnitude=0.1)
 
         # 更新标记位置（可选）
         try:

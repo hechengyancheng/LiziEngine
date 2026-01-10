@@ -103,7 +103,7 @@ def main():
         # 实时更新向量场（如果启用）
         if ui_manager.enable_update:
             vector_calculator.update_grid_with_adjacent_sum(grid)
-            add_inward_edge_vectors(grid, magnitude=0.1)
+            add_inward_edge_vectors(grid, magnitude=0.5)
 
         # 更新标记位置（可选）
         try:
@@ -112,8 +112,8 @@ def main():
             for marker in markers:
                 marker_system.add_vector_at_position(grid, x=marker["x"], y=marker["y"], vy= 0.01, vx=0.0)
                 # 摩擦力
-                marker['vx'] *= 0.99
-                marker['vy'] *= 0.99
+                #marker['vx'] *= 0.99
+                #marker['vy'] *= 0.99
             ui_manager.update_markers(grid)
             vector_calculator.update_grid_with_adjacent_sum(grid)            
         except Exception as e:
