@@ -81,27 +81,26 @@ class MarkerSystem:
             try:
                 # 在浮点坐标处拟合向量值
                 fitted_vx, fitted_vy = self.fit_vector_at_position(grid, x, y)
-                v = (fitted_vx ** 2 + fitted_vy ** 2) ** 0.5
+                fitted_v = (fitted_vx ** 2 + fitted_vy ** 2) ** 0.5
                 
                 # 设置标记的速度属性
-                if v >= 0.001:
-                    x += fitted_vx * mag 
-                    y += fitted_vy * mag
-
+                if fitted_v >= 0.01:
+                    new_x = max(0.0, min(w - 1.0, x + fitted_vx * dt))
+                    new_y = max(0.0, min(h - 1.0, y + fitted_vy * dt))
+                    v += fitted_v * dt
+                else:
+                    new_x = x
+                    new_y = y
                 # 存储拟合向量用于渲染
                 m["fitted_vx"] = fitted_vx
                 m["fitted_vy"] = fitted_vy
-                # 使用速度更新浮点位置（带反弹后的速度）
-                new_x = max(0.0, min(w - 1.0, x + vx * dt))
-                new_y = max(0.0, min(h - 1.0, y + vy * dt))
 
                 # 创建微小向量影响
                 self.create_tiny_vector(grid, new_x, new_y, mag)
 
                 m["x"] = new_x
                 m["y"] = new_y
-                m["vx"] = vx
-                m["vy"] = vy
+                m["v"] = v
                 new_markers.append(m)
 
             except Exception as e:

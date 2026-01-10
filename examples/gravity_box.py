@@ -110,7 +110,7 @@ def main():
             #给每个标记添加重力向量
             markers = marker_system.get_markers()
             for marker in markers:
-                marker_system.add_vector_at_position(grid, x=marker["x"], y=marker["y"], vy= 0.01, vx=0.0)
+                marker_system.add_vector_at_position(grid, x=marker["x"], y=marker["y"], vy= 0.1, vx=0.0)
                 # 摩擦力
                 #marker['vx'] *= 0.99
                 #marker['vy'] *= 0.99

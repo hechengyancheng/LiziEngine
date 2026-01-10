@@ -9,7 +9,7 @@
     ],
     "vector_scale": 1.0,
     "vector_self_weight": 0.0,
-    "vector_neighbor_weight": 0.25,
+    "vector_neighbor_weight": 0.2,
     "cam_x": 0.0,
     "cam_y": 0.0,
     "cam_zoom": 1.0,
