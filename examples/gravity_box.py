@@ -15,6 +15,7 @@ from lizi_engine.compute.vector_field import vector_calculator
 from plugins.ui import UIManager
 from plugins.controller import Controller
 from plugins.marker_system import MarkerSystem
+from plugins.toolkit import add_inward_edge_vectors
 
 def main():
     """主函数"""
@@ -67,11 +68,13 @@ def main():
 
     # 定义回调函数
     def on_space_press():
-        """重新生成切线模式"""
+        """重新生成切线模式并添加边缘向内向量"""
         center = (grid.shape[1] // 2, grid.shape[0] // 2)
         vector_calculator.create_tangential_pattern(grid, center=center, radius=50, magnitude=1.0)
+        # 添加边缘向内向量
+        add_inward_edge_vectors(grid, magnitude=0.5)
         app_core.state_manager.update({"view_changed": True, "grid_updated": True})
-        print("[示例] 已重新生成切线模式")
+        print("[示例] 已重新生成切线模式并添加边缘向内向量")
 
     def on_u_press():
         """切换实时更新"""
@@ -100,13 +103,14 @@ def main():
         # 实时更新向量场（如果启用）
         if ui_manager.enable_update:
             vector_calculator.update_grid_with_adjacent_sum(grid)
+            add_inward_edge_vectors(grid, magnitude=0.5)
 
         # 更新标记位置（可选）
         try:
             #给每个标记添加重力向量
             markers = marker_system.get_markers()
             for marker in markers:
-                marker_system.add_vector_at_position(grid, x=marker["x"], y=marker["y"], vy= 0.1, vx=0.0)
+                marker_system.add_vector_at_position(grid, x=marker["x"], y=marker["y"], vy= 0.06, vx=0.0)
                 # 摩擦力
                 marker['vx'] *= 0.9
                 marker['vy'] *= 0.9
