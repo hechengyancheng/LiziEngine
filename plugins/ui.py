@@ -192,14 +192,13 @@ class UIManager:
 
             window._scroll_y = 0
 
-    def update_markers(self, grid: np.ndarray, move_factor: float = 1.0, clear_threshold: float = 1e-3):
+    def update_markers(self, grid: np.ndarray, dt: float = 1.0, clear_threshold: float = 1e-3):
         """使用标记系统更新标记位置
 
         Args:
             grid: 向量场网格
-            neighborhood: 邻域大小
-            move_factor: 移动因子
+            dt: 时间步长
             clear_threshold: 清除阈值，低于此平均幅值的标记将被清除
         """
-        self.marker_system.update_markers(grid, move_factor, clear_threshold)
+        self.marker_system.update_markers(grid, dt, clear_threshold)
 

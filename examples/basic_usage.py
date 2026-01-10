@@ -104,9 +104,9 @@ def main():
         # 更新标记位置（可选）
         try:
             #给每个标记添加摩擦力
-            for marker in marker_system.markers:
-                marker['vx'] *= 0.99
-                marker['vy'] *= 0.99
+            #for marker in marker_system.markers:
+                #marker['vx'] *= 0.99
+                #marker['vy'] *= 0.99
             ui_manager.update_markers(grid)
             vector_calculator.update_grid_with_adjacent_sum(grid)
         except Exception as e:
