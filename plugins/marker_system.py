@@ -86,9 +86,9 @@ class MarkerSystem:
 
                 # 设置标记的速度属性
                 if fitted_vx > 0.001 or fitted_vx < -0.001:
-                    vx += fitted_vx * mag
+                    vx = fitted_vx * mag
                 if fitted_vy < -0.001 or fitted_vy > 0.001:    
-                    vy += fitted_vy * mag
+                    vy = fitted_vy * mag
 
                 # 存储拟合向量用于渲染
                 m["fitted_vx"] = fitted_vx
