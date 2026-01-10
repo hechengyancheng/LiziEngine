@@ -348,6 +348,20 @@ class Window(EventHandler):
             # 渲染标记不是关键路径，忽略错误以保证主渲染继续
             pass
 
+        # 渲染拟合向量（绿色线条）
+        try:
+            self._renderer.render_fitted_vectors(
+                cell_size=self._config_manager.get("cell_size", 1.0),
+                cam_x=cam_x,
+                cam_y=cam_y,
+                cam_zoom=cam_zoom,
+                viewport_width=viewport_width,
+                viewport_height=viewport_height
+            )
+        except Exception:
+            # 渲染拟合向量不是关键路径，忽略错误以保证主渲染继续
+            pass
+
         # 渲染向量场
         self._renderer.render_vector_field(
             grid,

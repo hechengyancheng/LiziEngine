@@ -89,6 +89,10 @@ class MarkerSystem:
                 vx += fitted_vx * mag
                 vy += fitted_vy * mag
 
+                # 存储拟合向量用于渲染
+                m["fitted_vx"] = fitted_vx
+                m["fitted_vy"] = fitted_vy
+
                 # 使用速度更新浮点位置（带反弹后的速度）
                 new_x = max(0.0, min(w - 1.0, x + vx * move_factor))
                 new_y = max(0.0, min(h - 1.0, y + vy * move_factor))

@@ -412,6 +412,89 @@ class VectorFieldRenderer(EventHandler):
         glBindBuffer(GL_ARRAY_BUFFER, 0)
         glUseProgram(0)
 
+    def render_fitted_vectors(self, cell_size: float = 1.0,
+                             cam_x: float = 0.0, cam_y: float = 0.0, cam_zoom: float = 1.0,
+                             viewport_width: int = 800, viewport_height: int = 600) -> None:
+        """渲染标记处的拟合向量（绿色线条）"""
+        if not self._initialized:
+            self.initialize()
+
+        markers = self._state_manager.get("markers", [])
+        if not markers:
+            return
+
+        # 绿色颜色
+        fitted_vector_color = [0.0, 1.0, 0.0]  # 绿色
+        vector_scale = self._config_manager.get("vector_scale", 1.0)
+        line_width = self._config_manager.get("line_width", 1.0)
+
+        # 设置线条宽度
+        glLineWidth(line_width)
+
+        # 构建顶点数组，每个向量需要两个点（起点和终点）
+        # 每个点有5个分量 (x, y, r, g, b)
+        vertices = []
+
+        for m in markers:
+            try:
+                x = float(m.get("x", 0.0))
+                y = float(m.get("y", 0.0))
+                fitted_vx = float(m.get("fitted_vx", 0.0))
+                fitted_vy = float(m.get("fitted_vy", 0.0))
+
+                # 计算起点和终点坐标
+                start_x = x * cell_size
+                start_y = y * cell_size
+                end_x = start_x + fitted_vx * vector_scale *100
+                end_y = start_y + fitted_vy * vector_scale *100
+
+                # 添加起点
+                vertices.extend([start_x, start_y, fitted_vector_color[0], fitted_vector_color[1], fitted_vector_color[2]])
+                # 添加终点
+                vertices.extend([end_x, end_y, fitted_vector_color[0], fitted_vector_color[1], fitted_vector_color[2]])
+
+            except Exception:
+                continue
+
+        if not vertices:
+            return
+
+        # 绑定VAO和VBO（复用已有VAO/VBO）
+        glBindVertexArray(self._vao)
+        glBindBuffer(GL_ARRAY_BUFFER, self._vbo)
+
+        # 上传顶点数据
+        glBufferData(GL_ARRAY_BUFFER, len(vertices) * 4, np.array(vertices, dtype=np.float32), GL_DYNAMIC_DRAW)
+
+        # 设置顶点属性
+        pos_loc = self._shader_program.get_attribute_location("a_pos")
+        col_loc = self._shader_program.get_attribute_location("a_col")
+
+        if pos_loc >= 0:
+            glEnableVertexAttribArray(pos_loc)
+            glVertexAttribPointer(pos_loc, 2, GL_FLOAT, GL_FALSE, 5 * 4, ctypes.c_void_p(0))
+
+        if col_loc >= 0:
+            glEnableVertexAttribArray(col_loc)
+            glVertexAttribPointer(col_loc, 3, GL_FLOAT, GL_FALSE, 5 * 4, ctypes.c_void_p(2 * 4))
+
+        # 使用着色器程序
+        self._shader_program.use()
+
+        # 设置uniform变量
+        half_w = (viewport_width / 2.0) / cam_zoom
+        half_h = (viewport_height / 2.0) / cam_zoom
+        self._shader_program.set_uniform_vec2("u_center", (cam_x, cam_y))
+        self._shader_program.set_uniform_vec2("u_half", (half_w, half_h))
+
+        # 绘制拟合向量线
+        glDrawArrays(GL_LINES, 0, len(vertices) // 5)
+
+        # 解绑
+        glBindVertexArray(0)
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+        glUseProgram(0)
+
     def _is_opengl_context_valid(self) -> bool:
         """检查OpenGL上下文是否有效"""
         try:
