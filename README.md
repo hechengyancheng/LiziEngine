@@ -75,9 +75,6 @@ python examples/basic_usage.py
 # 重力箱示例 - 物理模拟
 python examples/gravity_box.py
 
-# 模式示例 - 各种向量场模式
-python examples/patterns.py
-
 # 输入演示 - 交互功能展示
 python examples/input_demo.py
 ```
@@ -103,18 +100,14 @@ python examples/input_demo.py
 对于每个网格点，计算其自身和上下左右四个邻居向量的加权和：
 
 ```python
-权重和 = 自身权重 + 4 × 邻居权重
-'''
-当权重和等于1时，影响范围无穷大，类似电荷力
-当其小于1时，影响范围有限，类似支持力
-'''
+新向量值 = 自身值 × 自身权重 + 邻居总和 × 邻居权重
 ```
 
 - **自身权重** (`vector_self_weight`): 控制自身向量对结果的影响
 - **邻居权重** (`vector_neighbor_weight`): 控制邻居向量对结果的影响
 
 #### 2. 向量场更新
-迭代向量场的每个向量值，新向量=自身向量的权重积+邻居向量的权重积：
+迭代向量场的每个向量值：
 
 ```python
 # 向量场更新
@@ -300,6 +293,7 @@ pip install -r requirements.txt
 
 详细的API文档请参考 `doc/` 目录下的文档：
 - [READEME.md](doc/README.md)
+
 
 
 
