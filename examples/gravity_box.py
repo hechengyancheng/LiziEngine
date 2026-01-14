@@ -4,6 +4,7 @@ LiziEngine 示例：重力场模拟
 import sys
 import os
 import numpy as np
+import time
 
 # 添加项目根目录到Python路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -85,6 +86,11 @@ def main():
     # 注册回调
     ui_manager.register_callbacks(grid, on_space=on_space_press, on_u=on_u_press)
 
+    # FPS 限制变量
+    target_fps = app_core.config_manager.get("target_fps", 60)
+    frame_time = 1.0 / target_fps
+    last_time = time.time()
+
     while not window.should_close:
         # 更新窗口和处理 UI 事件
         window.update()
@@ -122,6 +128,13 @@ def main():
 
         # 渲染
         window.render(grid)
+
+        # FPS 限制
+        current_time = time.time()
+        elapsed = current_time - last_time
+        if elapsed < frame_time:
+            time.sleep(frame_time - elapsed)
+        last_time = time.time()
 
     # 清理资源
     print("[示例] 清理资源...")
