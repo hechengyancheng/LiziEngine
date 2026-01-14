@@ -60,14 +60,8 @@ class Controller:
                 print(f"[示例] 点击位置超出网格: ({gx}, {gy})")
                 return
 
-            radius = 2
             mag = 1
             magnitude = mag if self.vector_field_direction else -mag
-
-            direction = "朝外" if self.vector_field_direction else "朝内"
-            #print(f"[示例] 在网格位置放置向量场: ({gx}, {gy}), radius={radius}, mag={magnitude}, 方向={direction}")
-
-            #self.vector_calculator.create_radial_pattern(self.grid, center=(int(gx), int(gy)), radius=radius, magnitude=magnitude)
 
             # 同时创建一个标记，初始放在点击处（浮点位置）
             self.marker_system.add_marker(gx, gy, float(magnitude))
@@ -164,6 +158,11 @@ class Controller:
                 # 计算从标记到鼠标位置的方向向量
                 vx = gx - selected_marker["x"]
                 vy = gy - selected_marker["y"]
+                # 归一化向量
+                vec_len = (vx ** 2 + vy ** 2) ** 0.5
+                if vec_len > 0:
+                    vx /= vec_len
+                    vy /= vec_len
 
                 # 使用微小向量创建函数
                 self.marker_system.add_vector_at_position(self.grid, x=selected_marker["x"], y=selected_marker["y"], vx=vx, vy=vy)

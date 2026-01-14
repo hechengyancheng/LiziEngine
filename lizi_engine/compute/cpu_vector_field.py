@@ -57,7 +57,7 @@ class CPUVectorFieldCalculator:
 
         # 使用向量化操作计算邻居向量之和
         # 创建填充数组来处理边界条件
-        padded_grid = np.pad(grid, ((1, 1), (1, 1), (0, 0)), mode='constant')
+        padded_grid = np.pad(grid, ((1, 1), (1, 1), (0, 0)), mode='edge')
 
         # 计算四个方向的邻居贡献
         up_neighbors = padded_grid[2:, 1:-1] * neighbor_weight
@@ -109,8 +109,8 @@ class CPUVectorFieldCalculator:
         dy = y_coords - cy
         dist = np.sqrt(dx**2 + dy**2)
 
-        # 创建掩码：只处理在半径内且不在中心的点
-        mask = (dist < radius) & (dist > 0)
+        # 创建掩码：只处理在半径内的点
+        mask = (dist <= radius)
 
         # 计算径向角度
         angle = np.arctan2(dy, dx)
@@ -154,8 +154,8 @@ class CPUVectorFieldCalculator:
         dy = y_coords - cy
         dist = np.sqrt(dx**2 + dy**2)
 
-        # 创建掩码：只处理在半径内且不在中心的点
-        mask = (dist < radius) & (dist > 0)
+        # 创建掩码：只处理在半径内的点
+        mask = (dist <= radius)
 
         # 计算切线角度（径向角度+90度）
         angle = np.arctan2(dy, dx) + np.pi/2
@@ -264,9 +264,6 @@ class CPUVectorFieldCalculator:
     
     def fit_vector_at_position_fp32(self, grid: np.ndarray, x: float, y: float) -> Tuple[float, float]:
         """在浮点坐标处拟合向量值，使用双线性插值（单精度浮点版本）"""
-        if not self._initialized:
-            raise RuntimeError("GPU计算器未初始化")
-
         if not hasattr(grid, "ndim") or grid.ndim < 3 or grid.shape[2] < 2:
             return (0.0, 0.0)
 

@@ -120,27 +120,29 @@ class ConfigManager:
     def get(self, key: str, default: Any = None) -> Any:
         """获取配置值"""
         with self._lock:
-            if key in self._options:
-                return self._state_manager.get(key, self._options[key].value)
-            return self._state_manager.get(key, default)
+            flat_key = key.replace('.', '_')
+            if flat_key in self._options:
+                return self._state_manager.get(flat_key, self._options[flat_key].value)
+            return self._state_manager.get(flat_key, default)
 
     def set(self, key: str, value: Any) -> bool:
         """设置配置值"""
         with self._lock:
-            if key not in self._options:
-                print(f"[配置管理] 未知配置选项: {key}")
-                return False
+            flat_key = key.replace('.', '_')
+            if flat_key not in self._options:
+                # 动态注册未知选项
+                self.register_option(flat_key, value, f"动态配置选项: {key}")
 
-            option = self._options[key]
+            option = self._options[flat_key]
 
-            # 类型检查
+            # 类型检查（对于动态注册的选项，跳过类型检查）
             if not self._validate_value(value, option):
                 print(f"[配置管理] 配置值类型或范围不匹配: {key}")
                 return False
 
             # 设置值
-            old_value = self._state_manager.get(key, option.value)
-            self._state_manager.set(key, value)
+            old_value = self._state_manager.get(flat_key, option.value)
+            self._state_manager.set(flat_key, value)
 
             # 如果值发生了变化，发布配置变更事件
             if old_value != value:
@@ -278,9 +280,8 @@ class ConfigManager:
             if not config_file:
                 return False
 
-            # 获取扁平配置并转换为嵌套结构写入文件
-            flat_config = self.get_all()
-            nested = self._nest_dict_from_flat(flat_config)
+            # 获取所有配置（包括动态注册的）
+            all_config = self._state_manager.get_all()
 
             # 确保目录存在（仅当路径包含目录时创建）
             dir_name = os.path.dirname(config_file)
@@ -288,12 +289,20 @@ class ConfigManager:
                 os.makedirs(dir_name, exist_ok=True)
 
             with open(config_file, 'w', encoding='utf-8') as f:
-                json.dump(nested, f, indent=4)
+                json.dump(all_config, f, indent=4)
 
             return True
         except Exception as e:
             print(f"[配置管理] 保存配置文件失败: {e}")
             return False
+
+    def load_config(self) -> bool:
+        """加载配置（兼容性方法）"""
+        return self.load_from_file(self._config_file) if self._config_file else False
+
+    def save_config(self) -> bool:
+        """保存配置（兼容性方法）"""
+        return self.save_to_file(self._config_file) if self._config_file else False
 
     def get_option_info(self, key: str) -> Optional[Dict[str, Any]]:
         """获取配置选项信息"""
