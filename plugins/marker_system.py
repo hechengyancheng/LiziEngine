@@ -80,16 +80,8 @@ class MarkerSystem:
             mag = m["mag"]
             vx = m["vx"]
             vy = m["vy"]
-            #self.create_tiny_vector(grid, x, y, mag)
-            x = m["x"]
-            y = m["y"]
-            mag = m["mag"]
-            vx = m["vx"]
-            vy = m["vy"]
-            #self.create_tiny_vector(grid, x, y, mag)
             try:
                 # 在浮点坐标处拟合向量值
-                fitted_vx, fitted_vy = self.fit_vector_at_position(grid, x, y)
                 fitted_vx, fitted_vy = self.fit_vector_at_position(grid, x, y)
 
                 # 设置标记的速度属性
@@ -110,8 +102,6 @@ class MarkerSystem:
 
                 m["x"] = new_x
                 m["y"] = new_y
-                m["vx"] = vx
-                m["vy"] = vy
                 m["vx"] = vx
                 m["vy"] = vy
                 new_markers.append(m)
