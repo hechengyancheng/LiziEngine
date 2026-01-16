@@ -3,13 +3,14 @@
 支持从文件加载配置和热更新
 """
 import json
+import logging
 import os
 import sys
 import threading
 from typing import Any, Dict, Optional, Union, List
 from dataclasses import dataclass, asdict, field
-from .state import StateManager, state_manager
-from .events import Event, EventType, event_bus
+from .state import StateManager
+from .events import Event, EventBus, EventType, event_bus
 
 @dataclass
 class ConfigOption:
@@ -38,8 +39,9 @@ class ConfigManager:
         self._config_file = config_file
         self._options: Dict[str, ConfigOption] = {}
         self._lock = threading.RLock()
-        self._state_manager = state_manager
-        self._event_bus = event_bus
+        self._state_manager = StateManager()
+        self._event_bus = EventBus()
+        self._logger = logging.getLogger(__name__)
 
         # 初始化默认配置
         self._init_default_config()
@@ -58,8 +60,8 @@ class ConfigManager:
         # 向量场配置
         self.register_option("vector_color", [0.2, 0.6, 1.0], "向量颜色", type="array")
         self.register_option("vector_scale", 1.0, "向量缩放", type="number", min_value=0.1, max_value=10.0)
-        self.register_option("vector_self_weight", 0.2, "向量自身权重", type="number", min_value=0.0, max_value=10.0)
-        self.register_option("vector_neighbor_weight", 0.2, "向量邻居权重", type="number", min_value=0.0, max_value=10.0)
+        self.register_option("vector_self_weight", 0.0, "向量自身权重", type="number", min_value=0.0, max_value=10.0)
+        self.register_option("vector_neighbor_weight", 0.25, "向量邻居权重", type="number", min_value=0.0, max_value=10.0)
 
         # 视图配置
         self.register_option("cam_x", 0.0, "相机X坐标", type="number")
@@ -83,6 +85,9 @@ class ConfigManager:
 
         # 渲染配置：是否渲染向量线条（新增）
         self.register_option("render_vector_lines", True, "是否渲染向量线条", type="boolean")
+
+        # FPS 配置
+        self.register_option("target_fps", 60, "目标FPS", type="number", min_value=1, max_value=240)
 
     def register_option(self, key: str, default: Any, description: str = "", 
                        type: str = "string", options: List[Any] = None,
@@ -137,7 +142,7 @@ class ConfigManager:
 
             # 类型检查（对于动态注册的选项，跳过类型检查）
             if not self._validate_value(value, option):
-                print(f"[配置管理] 配置值类型或范围不匹配: {key}")
+                self._logger.warning(f"配置值类型或范围不匹配: {key} = {value}")
                 return False
 
             # 设置值
@@ -236,9 +241,10 @@ class ConfigManager:
                 ))
             else:
                 # 重置单个配置
-                if key in self._options:
-                    option = self._options[key]
-                    self._state_manager.set(key, option.default)
+                flat_key = key.replace('.', '_')
+                if flat_key in self._options:
+                    option = self._options[flat_key]
+                    self._state_manager.set(flat_key, option.default)
 
                     # 发布配置重置事件
                     self._event_bus.publish(Event(
@@ -270,7 +276,7 @@ class ConfigManager:
 
             return True
         except Exception as e:
-            print(f"[配置管理] 加载配置文件失败: {e}")
+            self._logger.error(f"加载配置文件失败: {file_path}, 错误: {e}")
             return False
 
     def save_to_file(self, file_path: Optional[str] = None) -> bool:
@@ -293,7 +299,7 @@ class ConfigManager:
 
             return True
         except Exception as e:
-            print(f"[配置管理] 保存配置文件失败: {e}")
+            self._logger.error(f"保存配置文件失败: {config_file}, 错误: {e}")
             return False
 
     def load_config(self) -> bool:
