@@ -90,8 +90,9 @@ class MarkerSystem:
                     vy += fitted_vy * mag
 
                 # 限制速度不超过单元格大小
-                vx = max(-cell_size, min(cell_size, vx))
-                vy = max(-cell_size, min(cell_size, vy))
+                if (vx ** 2 + vy ** 2) ** 0.5 > cell_size:  # 限制速度不超过单元格大小
+                    vx = vx / (vx ** 2 + vy ** 2) ** 0.5 * cell_size
+                    vy = vy / (vx ** 2 + vy ** 2) ** 0.5 * cell_size
 
                 # 使用速度更新浮点位置（带反弹后的速度）
                 new_x = max(0.0, min(w - 1.0, x + vx * dt))

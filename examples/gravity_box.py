@@ -109,17 +109,17 @@ def main():
         # 实时更新向量场（如果启用）
         if ui_manager.enable_update:
             #vector_calculator.update_grid_with_adjacent_sum(grid)
-            add_inward_edge_vectors(grid, magnitude=0.5)
+            add_inward_edge_vectors(grid, magnitude=0.2)
 
         # 更新标记位置（可选）
         try:
             #给每个标记添加重力向量
             markers = marker_system.get_markers()
             for marker in markers:
-                marker['vy'] += 0.01
+                vector_calculator.add_vector_at_position(grid, marker['x'], marker['y'], 0.0, 0.02)
                 # 摩擦力
-                marker['vx'] *= 0.95
-                marker['vy'] *= 0.95
+                marker['vx'] *= 0.9
+                marker['vy'] *= 0.9
             ui_manager.update_markers(grid)
             vector_calculator.update_grid_with_adjacent_sum(grid)     
             ui_manager.update_markers(grid)       
