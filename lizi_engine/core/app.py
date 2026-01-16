@@ -15,6 +15,50 @@ from ..compute.vector_field import VectorFieldCalculator
 from ..graphics.renderer import VectorFieldRenderer
 from ..window.window import Window
 
+class FPSLimiter(EventHandler):
+    """FPS限制器"""
+    def __init__(self, state_manager: StateManager, event_bus: EventBus, config_manager: ConfigManager):
+        self._state_manager = state_manager
+        self._event_bus = event_bus
+        self._config_manager = config_manager
+        self._last_time = time.time()
+        self._enabled = True
+
+        # 订阅配置变更事件
+        self._event_bus.subscribe(EventType.CONFIG_CHANGED, self)
+
+    def limit_fps(self) -> None:
+        """限制FPS"""
+        if not self._enabled:
+            return
+
+        target_fps = self._config_manager.get("target_fps", 60)
+        if target_fps <= 0:
+            return
+
+        frame_time = 1.0 / target_fps
+        current_time = time.time()
+        elapsed = current_time - self._last_time
+
+        if elapsed < frame_time:
+            time.sleep(frame_time - elapsed)
+
+        self._last_time = time.time()
+
+    def set_enabled(self, enabled: bool) -> None:
+        """启用或禁用FPS限制"""
+        self._enabled = enabled
+
+    def is_enabled(self) -> bool:
+        """检查FPS限制是否启用"""
+        return self._enabled
+
+    def handle(self, event: Event) -> None:
+        """处理事件"""
+        if event.type == EventType.CONFIG_CHANGED and event.data.get("key") == "target_fps":
+            # 配置变更时重置计时器
+            self._last_time = time.time()
+
 class GridManager(EventHandler):
     """网格数据管理器"""
     def __init__(self, state_manager: StateManager, event_bus: "EventBus"):
@@ -220,6 +264,7 @@ class AppCore:
         # 初始化各个管理器
         self._grid_manager = GridManager(self._state_manager, self._event_bus)
         self._view_manager = ViewManager(self._state_manager, self._event_bus)
+        self._fps_limiter = FPSLimiter(self._state_manager, self._event_bus, self._config_manager)
 
         # 从容器获取服务
         self._vector_calculator = container.resolve(VectorFieldCalculator)
@@ -265,6 +310,11 @@ class AppCore:
     def view_manager(self) -> ViewManager:
         """获取视图管理器"""
         return self._view_manager
+
+    @property
+    def fps_limiter(self) -> FPSLimiter:
+        """获取FPS限制器"""
+        return self._fps_limiter
 
     @property
     def vector_calculator(self) -> VectorFieldCalculator:

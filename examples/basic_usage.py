@@ -82,16 +82,11 @@ def main():
 
     ui_manager.register_callbacks(grid, on_space=_on_space)
 
-    # FPS 限制变量
-    target_fps = app_core.config_manager.get("target_fps", 60)
-    frame_time = 1.0 / target_fps
-    last_time = time.time()
-
     while not window.should_close:
         # 更新窗口和处理 UI 事件
         window.update()
 
-        # 清空网格       
+        # 清空网格
         grid.fill(0.0)
 
         # 处理鼠标拖动与滚轮
@@ -123,11 +118,7 @@ def main():
         window.render(grid)
 
         # FPS 限制
-        current_time = time.time()
-        elapsed = current_time - last_time
-        if elapsed < frame_time:
-            time.sleep(frame_time - elapsed)
-        last_time = time.time()
+        app_core.fps_limiter.limit_fps()
 
     # 清理资源
     print("[示例] 清理资源...")
