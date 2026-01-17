@@ -27,21 +27,21 @@ class UIManager:
         # 左键按下时选择的标记
         self._selected_marker = None
 
+        # 鼠标按钮状态
+        self._mouse_middle_pressed = False
+
     def register_callbacks(self, grid: np.ndarray, on_space=None, on_r=None, on_g=None, on_c=None, on_u=None, on_v=None, on_f=None):
         self._grid = grid
 
         def on_space_press():
-            # 优先使用外部提供的回调（用于切换模式等），否则调用控制器重置视图。
+            # 优先使用外部提供的回调（用于切换模式等）
             if callable(on_space):
                 try:
                     on_space()
                     return
                 except Exception as e:
                     print(f"[错误] on_space 回调异常: {e}")
-            try:
-                self.controller.reset_view()
-            except Exception:
-                pass
+            # 无外部回调时不执行默认行为
 
         def on_r_press():
             if callable(on_r):
@@ -50,7 +50,10 @@ class UIManager:
                     return
                 except Exception as e:
                     print(f"[错误] on_r 回调异常: {e}")
-            self.controller.reset_view()
+            try:
+                self.controller.reset_view()
+            except Exception as e:
+                print(f"[错误] reset_view 异常: {e}")
 
         def on_g_press():
             if callable(on_g):
@@ -59,7 +62,10 @@ class UIManager:
                     return
                 except Exception as e:
                     print(f"[错误] on_g 回调异常: {e}")
-            self.controller.toggle_grid()
+            try:
+                self.controller.toggle_grid()
+            except Exception as e:
+                print(f"[错误] toggle_grid 异常: {e}")
 
         def on_c_press():
             if callable(on_c):
@@ -68,9 +74,15 @@ class UIManager:
                     return
                 except Exception as e:
                     print(f"[错误] on_c 回调异常: {e}")
-            self.controller.clear_grid()
-            # 标记系统也应清空标记
-            self.marker_system.clear_markers()
+            try:
+                self.controller.clear_grid()
+            except Exception as e:
+                print(f"[错误] clear_grid 异常: {e}")
+            try:
+                # 标记系统也应清空标记
+                self.marker_system.clear_markers()
+            except Exception as e:
+                print(f"[错误] clear_markers 异常: {e}")
 
         def on_v_press():
             if callable(on_v):
@@ -79,7 +91,18 @@ class UIManager:
                     return
                 except Exception as e:
                     print(f"[错误] on_v 回调异常: {e}")
-            self.controller.switch_vector_field_direction()
+            try:
+                self.controller.switch_vector_field_direction()
+            except Exception as e:
+                print(f"[错误] switch_vector_field_direction 异常: {e}")
+
+        def on_u_press():
+            if callable(on_u):
+                try:
+                    on_u()
+                    return
+                except Exception as e:
+                    print(f"[错误] on_u 回调异常: {e}")
 
         def on_f_press():
             if callable(on_f):
@@ -109,6 +132,7 @@ class UIManager:
         input_handler.register_key_callback(KeyMap.R, MouseMap.PRESS, on_r_press)
         input_handler.register_key_callback(KeyMap.G, MouseMap.PRESS, on_g_press)
         input_handler.register_key_callback(KeyMap.C, MouseMap.PRESS, on_c_press)
+        input_handler.register_key_callback(KeyMap.U, MouseMap.PRESS, on_u_press)
         input_handler.register_key_callback(KeyMap.V, MouseMap.PRESS, on_v_press)
         input_handler.register_key_callback(KeyMap.F, MouseMap.PRESS, on_f_press)
 
@@ -125,15 +149,11 @@ class UIManager:
         # 添加鼠标中键按下和释放的回调
         def on_mouse_middle_press():
             # 设置中键按下标志
-            if hasattr(self.window, '_mouse_middle_pressed'):
-                self.window._mouse_middle_pressed = True
-            else:
-                setattr(self.window, '_mouse_middle_pressed', True)
+            self._mouse_middle_pressed = True
 
         def on_mouse_middle_release():
             # 清除中键按下标志
-            if hasattr(self.window, '_mouse_middle_pressed'):
-                self.window._mouse_middle_pressed = False
+            self._mouse_middle_pressed = False
 
         # 注册鼠标中键回调
         input_handler.register_mouse_callback(MouseMap.MIDDLE, MouseMap.PRESS, on_mouse_middle_press)
@@ -150,25 +170,16 @@ class UIManager:
                 print(f"[错误] 处理左键持续按下时发生异常: {e}")
 
         # 只在鼠标中键按下时才允许拖动视图
-        if getattr(window, "_mouse_middle_pressed", False):
+        if self._mouse_middle_pressed:
             x, y = window._mouse_x, window._mouse_y
 
             dx = x - (self._last_mouse_x if self._last_mouse_x is not None else x)
             dy = y - (self._last_mouse_y if self._last_mouse_y is not None else y)
 
-            cam_zoom = self.app_core.state_manager.get("cam_zoom", 1.0)
-
-            world_dx = dx / cam_zoom
-            world_dy = dy / cam_zoom
-
-            cam_x = self.app_core.state_manager.get("cam_x", 0.0) - world_dx
-            cam_y = self.app_core.state_manager.get("cam_y", 0.0) - world_dy
-
-            self.app_core.state_manager.update({
-                "cam_x": cam_x,
-                "cam_y": cam_y,
-                "view_changed": True
-            })
+            try:
+                self.controller.handle_mouse_drag_view(dx, dy)
+            except Exception as e:
+                print(f"[错误] process_mouse_drag_view 异常: {e}")
 
             self._last_mouse_x = x
             self._last_mouse_y = y
@@ -180,15 +191,10 @@ class UIManager:
     def process_scroll(self):
         window = self.window
         if hasattr(window, "_scroll_y") and window._scroll_y != 0:
-            cam_zoom = self.app_core.state_manager.get("cam_zoom", 1.0)
-            zoom_speed = 0.5
-            cam_zoom += window._scroll_y * zoom_speed
-            cam_zoom = max(0.1, min(10.0, cam_zoom))
-
-            self.app_core.state_manager.update({
-                "cam_zoom": cam_zoom,
-                "view_changed": True
-            })
+            try:
+                self.controller.handle_scroll_zoom(window._scroll_y)
+            except Exception as e:
+                print(f"[错误] process_scroll 异常: {e}")
 
             window._scroll_y = 0
 
