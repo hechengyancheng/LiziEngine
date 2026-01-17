@@ -3,8 +3,6 @@ LiziEngine 示例：重力场模拟
 """
 import sys
 import os
-import numpy as np
-import time
 
 # 添加项目根目录到Python路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -103,23 +101,21 @@ def main():
 
         # 实时更新向量场（如果启用）
         if ui_manager.enable_update:
-            #vector_calculator.update_grid_with_adjacent_sum(grid)
+            # 创建边缘向内向量
             add_inward_edge_vectors(grid, magnitude=0.2)
 
-        # 更新标记位置（可选）
-        try:
-            #给每个标记添加重力向量
-            markers = marker_system.get_markers()
-            for marker in markers:
-                vector_calculator.add_vector_at_position(grid, marker['x'], marker['y'], 0.0, 0.02)
-                # 摩擦力
-                marker['vx'] *= 0.9
-                marker['vy'] *= 0.9
-            ui_manager.update_markers(grid)
-            vector_calculator.update_grid_with_adjacent_sum(grid)
-            ui_manager.update_markers(grid)
-        except Exception as e:
-            print(f"[错误] 更新标记异常: {e}")
+            # 更新标记位置（可选）
+            try:
+                #给每个标记添加重力向量
+                for marker in marker_system.markers:
+                    vector_calculator.add_vector_at_position(grid, marker['x'], marker['y'], 0.0, 0.02)
+                    # 摩擦力
+                    marker['vx'] *= 0.9
+                    marker['vy'] *= 0.9
+                # 更新向量场和标记
+                marker_system.update_field_and_markers(grid)
+            except Exception as e:
+                print(f"[错误] 更新标记异常: {e}")
 
         # 渲染
         window.render(grid)

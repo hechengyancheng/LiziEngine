@@ -69,7 +69,7 @@ class MarkerSystem:
             return
 
         h, w = grid.shape[0], grid.shape[1]
-        cell_size = self.app_core.config_manager.get("cell_size", 4.0)
+        cell_size = self.app_core.config_manager.get("cell_size", 1.0)
 
         # 期望 grid 最后一维至少 2，代表 vx, vy
         new_markers = []
@@ -86,8 +86,8 @@ class MarkerSystem:
 
                 # 设置标记的速度属性
                 if fitted_vx ** 2 + fitted_vy ** 2 > 0.001 ** 2:
-                    vx += fitted_vx * mag
-                    vy += fitted_vy * mag
+                    vx += fitted_vx * 1/mag
+                    vy += fitted_vy * 1/mag
 
                 # 限制速度不超过单元格大小
                 if (vx ** 2 + vy ** 2) ** 0.5 > cell_size:  # 限制速度不超过单元格大小
@@ -131,9 +131,12 @@ class MarkerSystem:
         # 在指定位置拟合一个向量
         return self.vector_calculator.fit_vector_at_position(grid, x, y)
     
-    def fit_vector_at_position_fp32(self, grid: np.ndarray, x: float, y: float) -> Tuple[float, float]:
-        # 在指定位置拟合一个向量
-        return self.vector_calculator.fit_vector_at_position_fp32(grid, x, y)
+    def update_field_and_markers(self, grid: np.ndarray) -> None:
+        # 更新向量场和标记
+        self.update_markers(grid)
+        self.vector_calculator.update_grid_with_adjacent_sum(grid)
+        # 再次更新标记
+        self.update_markers(grid)
 
     def _sync_to_state_manager(self) -> None:
         """将标记列表同步到状态管理器"""
