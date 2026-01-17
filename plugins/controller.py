@@ -26,8 +26,8 @@ class Controller:
 
     def toggle_grid(self):
         """切换网格显示"""
-        show_grid = self.app_core.state_manager.get("show_grid", True)
-        self.app_core.state_manager.set("show_grid", not show_grid)
+        show_grid = self.app_core.config_manager.get("show_grid", True)
+        self.app_core.config_manager.set("show_grid", not show_grid)
 
     def clear_grid(self):
         """清空网格"""
