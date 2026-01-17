@@ -11,10 +11,7 @@ from lizi_engine.core.container import container
 from lizi_engine.core.app import AppCore
 from lizi_engine.window.window import Window
 from lizi_engine.compute.vector_field import vector_calculator
-from plugins.ui import UIManager
-from plugins.controller import Controller
-from plugins.marker_system import MarkerSystem
-from plugins.toolkit import add_inward_edge_vectors
+from lizi_engine.core.plugin import UIManager, Controller, MarkerSystem, add_inward_edge_vectors
 
 def main():
     """主函数"""
