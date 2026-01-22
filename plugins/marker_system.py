@@ -99,6 +99,12 @@ class MarkerSystem:
                 new_x = max(0.0, min(w - 1.0, x + vx * dt))
                 new_y = max(0.0, min(h - 1.0, y + vy * dt))
 
+                # 重力
+                vy += 0.01 * dt
+                # 摩擦力
+                vx *= 0.9
+                vy *= 0.9
+
                 # 收集位置以便批量创建微小向量影响
                 tiny_vector_positions.append((new_x, new_y, mag))
 

@@ -103,12 +103,6 @@ def main():
 
             # 更新标记位置（可选）
             try:
-                #给每个标记添加重力向量
-                for marker in marker_system.markers:
-                    vector_calculator.add_vector_at_position(grid, marker['x'], marker['y'], 0.0, 0.02)
-                    # 摩擦力
-                    marker['vx'] *= 0.9
-                    marker['vy'] *= 0.9
                 # 更新向量场和标记
                 marker_system.update_field_and_markers(grid)
             except Exception as e:
