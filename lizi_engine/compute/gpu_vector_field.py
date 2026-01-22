@@ -417,6 +417,33 @@ class GPUVectorFieldCalculator:
                 if abs(dx) + abs(dy) == 1:  # 上下左右邻居
                     self.add_vector_at_position(grid, x + dx, y + dy, dx * mag, dy * mag)
 
+    def create_tiny_vectors_batch(self, grid: np.ndarray, positions: List[Tuple[float, float, float]]) -> None:
+        """批量创建微小向量影响，用于优化性能
+
+        Args:
+            grid: 向量场网格
+            positions: 位置列表，每个元素为 (x, y, mag) 元组
+        """
+        if not self._initialized:
+            raise RuntimeError("GPU计算器未初始化")
+
+        if not hasattr(grid, "ndim") or not positions:
+            return
+
+        h, w = grid.shape[0], grid.shape[1]
+
+        # GPU版本暂时使用循环处理，后续可优化为真正的GPU批量操作
+        for x, y, mag in positions:
+            # 确保坐标在有效范围内
+            x = max(0.0, min(w - 1.0, float(x)))
+            y = max(0.0, min(h - 1.0, float(y)))
+
+            # 只影响当前位置及其上下左右邻居，使用浮点坐标
+            for dy in [-1, 0, 1]:
+                for dx in [-1, 0, 1]:
+                    if abs(dx) + abs(dy) == 1:  # 上下左右邻居
+                        self.add_vector_at_position(grid, x + dx, y + dy, dx * mag, dy * mag)
+
     def add_vector_at_position(self, grid: np.ndarray, x: float, y: float, vx: float, vy: float) -> None:
         """在浮点坐标处添加向量，使用双线性插值的逆方法，将向量分布到四个最近的整数坐标"""
         if not self._initialized:

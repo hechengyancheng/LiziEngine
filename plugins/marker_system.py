@@ -73,6 +73,7 @@ class MarkerSystem:
 
         # 期望 grid 最后一维至少 2，代表 vx, vy
         new_markers = []
+        tiny_vector_positions = []  # 收集需要创建微小向量影响的位置
 
         for m in self.markers:
             x = m["x"]
@@ -98,8 +99,8 @@ class MarkerSystem:
                 new_x = max(0.0, min(w - 1.0, x + vx * dt))
                 new_y = max(0.0, min(h - 1.0, y + vy * dt))
 
-                # 创建微小向量影响
-                self.create_tiny_vector(grid, new_x, new_y, mag)
+                # 收集位置以便批量创建微小向量影响
+                tiny_vector_positions.append((new_x, new_y, mag))
 
                 m["x"] = new_x
                 m["y"] = new_y
@@ -113,6 +114,10 @@ class MarkerSystem:
                 # 保留标记以便后续检查
                 new_markers.append(m)
                 continue
+
+        # 批量创建微小向量影响，提高性能
+        if tiny_vector_positions:
+            self.vector_calculator.create_tiny_vectors_batch(grid, tiny_vector_positions)
 
         # 更新内部标记列表并写回 state_manager 以便界面绘制或外部使用
         self.markers = new_markers
