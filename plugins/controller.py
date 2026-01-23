@@ -133,6 +133,8 @@ class Controller:
                 vx = gx - selected_marker["x"]
                 vy = gy - selected_marker["y"]
 
+                vx *= 0.1  # 缩放向量以控制影响范围
+                vy *= 0.1
                 # 使用微小向量创建函数
                 self.marker_system.add_vector_at_position(self.grid, x=selected_marker["x"], y=selected_marker["y"], vx=vx, vy=vy)
 
