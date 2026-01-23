@@ -51,7 +51,8 @@ class MarkerSystem:
         Args:
             grid: 向量场网格
             dt: 时间步长
-            clear_threshold: 清除阈值，低于此拟合向量幅值的标记将被清除
+            gravity: 重力加速度
+            speed_factor: 速度衰减因子
         """
         if not hasattr(grid, "ndim"):
             return
