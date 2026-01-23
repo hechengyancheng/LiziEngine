@@ -3,14 +3,14 @@ CPU向量场计算模块 - 提供基于CPU的向量场计算功能
 """
 import numpy as np
 from typing import Tuple, Union, List, Optional, Any
-from ..core.config import config_manager
+from ..core.state import state_manager
 from ..core.events import Event, EventType, event_bus
 
 class CPUVectorFieldCalculator:
     """CPU向量场计算器"""
     def __init__(self):
         self._event_bus = event_bus
-        self._config_manager = config_manager
+        self._state_manager = state_manager
 
     def sum_adjacent_vectors(self, grid: np.ndarray, x: int, y: int,
                            self_weight: float = 1.0, neighbor_weight: float = 0.1) -> Tuple[float, float]:
@@ -52,8 +52,8 @@ class CPUVectorFieldCalculator:
         h, w = grid.shape[:2]
 
         # 获取配置参数
-        neighbor_weight = self._config_manager.get("vector_neighbor_weight", 0.1)
-        self_weight = self._config_manager.get("vector_self_weight", 1.0)
+        neighbor_weight = self._state_manager.get("vector_neighbor_weight", 0.1)
+        self_weight = self._state_manager.get("vector_self_weight", 1.0)
 
         # 使用向量化操作计算邻居向量之和
         # 创建填充数组来处理边界条件

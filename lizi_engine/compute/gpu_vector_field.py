@@ -5,14 +5,14 @@ GPU向量场计算模块 - 提供基于GPU的向量场计算功能
 import numpy as np
 import pyopencl as cl
 from typing import Tuple, Union, List, Optional, Any
-from ..core.config import config_manager
+from ..core.state import state_manager
 from ..core.events import Event, EventType, event_bus
 
 class GPUVectorFieldCalculator:
     """GPU向量场计算器，使用OpenCL实现"""
     def __init__(self):
         self._event_bus = event_bus
-        self._config_manager = config_manager
+        self._state_manager = state_manager
         self._ctx = None
         self._queue = None
         self._programs = {}
@@ -372,8 +372,8 @@ class GPUVectorFieldCalculator:
         h, w = grid.shape[:2]
 
         # 获取配置参数
-        neighbor_weight = self._config_manager.get("vector_neighbor_weight", 0.1)
-        self_weight = self._config_manager.get("vector_self_weight", 1.0)
+        neighbor_weight = self._state_manager.get("vector_neighbor_weight", 0.1)
+        self_weight = self._state_manager.get("vector_self_weight", 1.0)
 
         # 创建OpenCL缓冲区
         grid_buf = cl.Buffer(self._ctx, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=grid)
