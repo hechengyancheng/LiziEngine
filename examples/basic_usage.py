@@ -99,12 +99,8 @@ def main():
 
             # 更新标记位置（可选）
             try:
-                #给每个标记添加摩擦力
-                for marker in marker_system.markers:
-                    marker['vx'] *= 0.99
-                    marker['vy'] *= 0.99
                 # 更新向量场和标记
-                marker_system.update_field_and_markers(grid)
+                marker_system.update_field_and_markers(grid, dt=1.0, gravity=0.0, speed_factor=0.99)
             except Exception as e:
                 print(f"[错误] 更新标记异常: {e}")
 

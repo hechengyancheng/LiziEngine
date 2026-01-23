@@ -3,14 +3,14 @@ CPU向量场计算模块 - 提供基于CPU的向量场计算功能
 """
 import numpy as np
 from typing import Tuple, Union, List, Optional, Any
-from ..core.config import config_manager
+from ..core.state import state_manager
 from ..core.events import Event, EventType, event_bus
 
 class CPUVectorFieldCalculator:
     """CPU向量场计算器"""
     def __init__(self):
         self._event_bus = event_bus
-        self._config_manager = config_manager
+        self._state_manager = state_manager
 
     def sum_adjacent_vectors(self, grid: np.ndarray, x: int, y: int,
                            self_weight: float = 1.0, neighbor_weight: float = 0.1) -> Tuple[float, float]:
@@ -52,8 +52,8 @@ class CPUVectorFieldCalculator:
         h, w = grid.shape[:2]
 
         # 获取配置参数
-        neighbor_weight = self._config_manager.get("vector_neighbor_weight", 0.1)
-        self_weight = self._config_manager.get("vector_self_weight", 1.0)
+        neighbor_weight = self._state_manager.get("vector_neighbor_weight", 0.1)
+        self_weight = self._state_manager.get("vector_self_weight", 1.0)
 
         # 使用向量化操作计算邻居向量之和
         # 创建填充数组来处理边界条件
@@ -189,6 +189,30 @@ class CPUVectorFieldCalculator:
             for dx in [-1, 0, 1]:
                 if abs(dx) + abs(dy) == 1:  # 上下左右邻居
                     self.add_vector_at_position(grid, x + dx, y + dy, dx * mag, dy * mag)
+
+    def create_tiny_vectors_batch(self, grid: np.ndarray, positions: List[Tuple[float, float, float]]) -> None:
+        """批量创建微小向量影响，用于优化性能
+
+        Args:
+            grid: 向量场网格
+            positions: 位置列表，每个元素为 (x, y, mag) 元组
+        """
+        if not hasattr(grid, "ndim") or not positions:
+            return
+
+        h, w = grid.shape[0], grid.shape[1]
+
+        # 使用向量化操作批量处理
+        for x, y, mag in positions:
+            # 确保坐标在有效范围内
+            x = max(0.0, min(w - 1.0, float(x)))
+            y = max(0.0, min(h - 1.0, float(y)))
+
+            # 只影响当前位置及其上下左右邻居，使用浮点坐标
+            for dy in [-1, 0, 1]:
+                for dx in [-1, 0, 1]:
+                    if abs(dx) + abs(dy) == 1:  # 上下左右邻居
+                        self.add_vector_at_position(grid, x + dx, y + dy, dx * mag, dy * mag)
 
     def add_vector_at_position(self, grid: np.ndarray, x: float, y: float, vx: float, vy: float) -> None:
         """在浮点坐标处添加向量，使用双线性插值的逆方法，将向量分布到四个最近的整数坐标"""

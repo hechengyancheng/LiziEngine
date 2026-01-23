@@ -43,7 +43,7 @@ class MarkerSystem:
         """
         return list(self.markers)
 
-    def update_markers(self, grid: np.ndarray, dt: float = 1.0, clear_threshold: float = 1e-3) -> None:
+    def update_markers(self, grid: np.ndarray, dt: float = 1.0, gravity: float = 0.01, speed_factor: float = 0.9) -> None:
         """根据浮点坐标处拟合向量移动标记。
 
         算法：在标记的浮点坐标处使用双线性插值拟合向量值，将标记按 fitted_v * dt 偏移。
@@ -51,7 +51,8 @@ class MarkerSystem:
         Args:
             grid: 向量场网格
             dt: 时间步长
-            clear_threshold: 清除阈值，低于此拟合向量幅值的标记将被清除
+            gravity: 重力加速度
+            speed_factor: 速度衰减因子
         """
         if not hasattr(grid, "ndim"):
             return
@@ -69,10 +70,11 @@ class MarkerSystem:
             return
 
         h, w = grid.shape[0], grid.shape[1]
-        cell_size = self.app_core.config_manager.get("cell_size", 1.0)
+        cell_size = self.app_core.state_manager.get("cell_size", 1.0)
 
         # 期望 grid 最后一维至少 2，代表 vx, vy
         new_markers = []
+        tiny_vector_positions = []  # 收集需要创建微小向量影响的位置
 
         for m in self.markers:
             x = m["x"]
@@ -85,9 +87,8 @@ class MarkerSystem:
                 fitted_vx, fitted_vy = self.fit_vector_at_position(grid, x, y)
 
                 # 设置标记的速度属性
-                if fitted_vx ** 2 + fitted_vy ** 2 > 0.001 ** 2:
-                    vx += fitted_vx * 1/mag
-                    vy += fitted_vy * 1/mag
+                vx += fitted_vx * 1/mag
+                vy += fitted_vy * 1/mag
 
                 # 限制速度不超过单元格大小
                 if (vx ** 2 + vy ** 2) ** 0.5 > cell_size:  # 限制速度不超过单元格大小
@@ -98,8 +99,14 @@ class MarkerSystem:
                 new_x = max(0.0, min(w - 1.0, x + vx * dt))
                 new_y = max(0.0, min(h - 1.0, y + vy * dt))
 
-                # 创建微小向量影响
-                self.create_tiny_vector(grid, new_x, new_y, mag)
+                # 重力
+                vy += gravity * dt
+                # 摩擦力
+                vx *= speed_factor
+                vy *= speed_factor
+
+                # 收集位置以便批量创建微小向量影响
+                tiny_vector_positions.append((new_x, new_y, mag))
 
                 m["x"] = new_x
                 m["y"] = new_y
@@ -113,6 +120,10 @@ class MarkerSystem:
                 # 保留标记以便后续检查
                 new_markers.append(m)
                 continue
+
+        # 批量创建微小向量影响，提高性能
+        if tiny_vector_positions:
+            self.vector_calculator.create_tiny_vectors_batch(grid, tiny_vector_positions)
 
         # 更新内部标记列表并写回 state_manager 以便界面绘制或外部使用
         self.markers = new_markers
@@ -131,12 +142,12 @@ class MarkerSystem:
         # 在指定位置拟合一个向量
         return self.vector_calculator.fit_vector_at_position(grid, x, y)
     
-    def update_field_and_markers(self, grid: np.ndarray) -> None:
+    def update_field_and_markers(self, grid: np.ndarray, dt: float, gravity: float, speed_factor: float) -> None:
         # 更新向量场和标记
-        self.update_markers(grid)
+        self.update_markers(grid, dt=dt, gravity=gravity, speed_factor=speed_factor)
         self.vector_calculator.update_grid_with_adjacent_sum(grid)
         # 再次更新标记
-        self.update_markers(grid)
+        self.update_markers(grid, dt=dt, gravity=gravity, speed_factor=speed_factor)
 
     def _sync_to_state_manager(self) -> None:
         """将标记列表同步到状态管理器"""

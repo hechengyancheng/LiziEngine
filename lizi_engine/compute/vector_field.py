@@ -131,6 +131,23 @@ class VectorFieldCalculator(EventHandler):
 
         calculator.create_tiny_vector(grid, x, y, mag)
 
+    def create_tiny_vectors_batch(self, grid: np.ndarray, positions: List[Tuple[float, float, float]]) -> None:
+        """批量创建微小向量影响，用于优化性能
+
+        Args:
+            grid: 向量场网格
+            positions: 位置列表，每个元素为 (x, y, mag) 元组
+        """
+        # 根据当前设备选择计算器
+        calculator = self._gpu_calculator if self._current_device == "gpu" and self._gpu_calculator else self._cpu_calculator
+
+        if hasattr(calculator, 'create_tiny_vectors_batch'):
+            calculator.create_tiny_vectors_batch(grid, positions)
+        else:
+            # 如果计算器不支持批量处理，回退到逐个处理
+            for x, y, mag in positions:
+                calculator.create_tiny_vector(grid, x, y, mag)
+
     def add_vector_at_position(self, grid: np.ndarray, x: float, y: float, vx: float, vy: float) -> None:
         """在浮点坐标处添加向量，使用双线性插值的逆方法，将向量分布到四个最近的整数坐标"""
         # 根据当前设备选择计算器
