@@ -43,7 +43,7 @@ class MarkerSystem:
         """
         return list(self.markers)
 
-    def update_markers(self, grid: np.ndarray, dt: float = 1.0, gravity: float = 0.01, speed_factor: float = 0.9) -> None:
+    def update_markers(self, grid: np.ndarray, dt: float = 1.0, gravity: float = 0.01, speed_factor: float = 0.9, tiny_vectors: bool = True) -> None:
         """根据浮点坐标处拟合向量移动标记。
 
         算法：在标记的浮点坐标处使用双线性插值拟合向量值，将标记按 fitted_v * dt 偏移。
@@ -53,6 +53,7 @@ class MarkerSystem:
             dt: 时间步长
             gravity: 重力加速度
             speed_factor: 速度衰减因子
+            tiny_vectors: 是否在标记位置创建微小向量影响
         """
         if not hasattr(grid, "ndim"):
             return
@@ -106,7 +107,8 @@ class MarkerSystem:
                 vy *= speed_factor
 
                 # 收集位置以便批量创建微小向量影响
-                tiny_vector_positions.append((new_x, new_y, mag))
+                if tiny_vectors:
+                    tiny_vector_positions.append((new_x, new_y, mag))
 
                 m["x"] = new_x
                 m["y"] = new_y
@@ -141,13 +143,13 @@ class MarkerSystem:
     def fit_vector_at_position(self, grid: np.ndarray, x: float, y: float) -> Tuple[float, float]:
         # 在指定位置拟合一个向量
         return self.vector_calculator.fit_vector_at_position(grid, x, y)
-    
+
     def update_field_and_markers(self, grid: np.ndarray, dt: float, gravity: float, speed_factor: float) -> None:
         # 更新向量场和标记
-        self.update_markers(grid, dt=dt, gravity=gravity, speed_factor=speed_factor)
+        self.update_markers(grid, dt=dt, gravity=gravity, speed_factor=speed_factor, tiny_vectors=True)
         self.vector_calculator.update_grid_with_adjacent_sum(grid)
         # 再次更新标记
-        self.update_markers(grid, dt=dt, gravity=gravity, speed_factor=speed_factor)
+        self.update_markers(grid, dt=dt, gravity=gravity, speed_factor=speed_factor, tiny_vectors=False)
 
     def _sync_to_state_manager(self) -> None:
         """将标记列表同步到状态管理器"""
