@@ -18,6 +18,8 @@ class Command:
         self.no_param_commands = set()
         self.logger = logging.getLogger(__name__)
         self._load_commands()
+        # 注册 help 命令
+        self.register_command('help', self.list_commands, '显示所有可用指令', no_param=True)
 
     def _load_commands(self):
         """从外部文件加载命令和描述"""
@@ -64,7 +66,7 @@ class Command:
 
         cmd = parts[0].lstrip('/').lower()
         if cmd not in self.commands:
-            return f"错误: 未知命令 '{cmd}'。可用命令: {', '.join(self.commands.keys())}"
+            return f"错误: 未知命令 '{cmd}'。请使用 'help' 指令查看所有支持指令。"
 
         args = parts[1:]  # 获取参数
         try:
