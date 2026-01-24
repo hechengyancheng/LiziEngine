@@ -133,11 +133,41 @@ class Command:
 class CommandInputHandler:
     """指令输入处理器，处理指令模式的切换和输入"""
 
-    def __init__(self, command_plugin):
+    def __init__(self, command_plugin, history_file='plugins/command_history.json'):
         self.command_plugin = command_plugin
         self.command_mode = False
         self.command_string = ""
         self.was_pressed = {}
+        self.history_file = history_file
+        self.history = []
+        self.history_index = -1
+        self.logger = logging.getLogger(__name__)
+        self._load_history()
+
+    def _load_history(self):
+        """从文件加载命令历史"""
+        if os.path.exists(self.history_file):
+            try:
+                with open(self.history_file, 'r', encoding='utf-8') as f:
+                    self.history = json.load(f)
+                self.logger.info(f"Loaded {len(self.history)} commands from history")
+            except (json.JSONDecodeError, IOError) as e:
+                self.logger.warning(f"Failed to load command history: {e}")
+                self.history = []
+        else:
+            self.history = []
+
+    def _save_history(self):
+        """保存命令历史到文件"""
+        try:
+            # 限制历史记录数量，避免文件过大
+            max_history = 100
+            if len(self.history) > max_history:
+                self.history = self.history[-max_history:]
+            with open(self.history_file, 'w', encoding='utf-8') as f:
+                json.dump(self.history, f, ensure_ascii=False, indent=2)
+        except IOError as e:
+            self.logger.error(f"Failed to save command history: {e}")
 
     def toggle_command_mode(self):
         """切换指令输入模式"""
@@ -224,7 +254,7 @@ class CommandInputHandler:
         if input_handler.is_key_pressed(KeyMap.ESCAPE):
             if not self.was_pressed.get(KeyMap.ESCAPE, False):
                 self.command_mode = False
-                print("[指令模式] 已退出")
+                print("\n[指令模式] 已退出")
             self.was_pressed[KeyMap.ESCAPE] = True
         else:
             self.was_pressed[KeyMap.ESCAPE] = False
@@ -237,6 +267,33 @@ class CommandInputHandler:
             self.was_pressed[KeyMap.BACKSPACE] = True
         else:
             self.was_pressed[KeyMap.BACKSPACE] = False
+
+        # 检查UP键浏览历史记录（上一条）
+        if input_handler.is_key_pressed(KeyMap.UP):
+            if not self.was_pressed.get(KeyMap.UP, False) and self.history:
+                if self.history_index == -1:
+                    # 保存当前输入的命令
+                    self.temp_command = self.command_string
+                self.history_index = min(self.history_index + 1, len(self.history) - 1)
+                self.command_string = self.history[len(self.history) - 1 - self.history_index]
+                print(f"\r\033[K[指令输入] {self.command_string}", end='', flush=True)
+            self.was_pressed[KeyMap.UP] = True
+        else:
+            self.was_pressed[KeyMap.UP] = False
+
+        # 检查DOWN键浏览历史记录（下一条）
+        if input_handler.is_key_pressed(KeyMap.DOWN):
+            if not self.was_pressed.get(KeyMap.DOWN, False) and self.history:
+                self.history_index = max(self.history_index - 1, -1)
+                if self.history_index == -1:
+                    # 回到原始输入
+                    self.command_string = getattr(self, 'temp_command', "")
+                else:
+                    self.command_string = self.history[len(self.history) - 1 - self.history_index]
+                print(f"\r\033[K[指令输入] {self.command_string}", end='', flush=True)
+            self.was_pressed[KeyMap.DOWN] = True
+        else:
+            self.was_pressed[KeyMap.DOWN] = False
 
         # 处理字符输入，支持引号
         in_quotes = False
@@ -273,5 +330,17 @@ class CommandInputHandler:
         print(f"\n[指令] 执行: {self.command_string}")
         result = self.command_plugin.execute(self.command_string)
         print(f"[指令] 结果: {result}")
+
+        # 如果命令执行成功（不以"错误"开头），添加到历史记录
+        if not result.startswith("错误"):
+            # 避免重复添加相同的命令
+            if not self.history or self.history[-1] != self.command_string:
+                self.history.append(self.command_string)
+                self._save_history()
+
+        # 重置历史索引
+        self.history_index = -1
+        if hasattr(self, 'temp_command'):
+            delattr(self, 'temp_command')
 
         self.command_mode = False
