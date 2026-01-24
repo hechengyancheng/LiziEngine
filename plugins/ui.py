@@ -219,14 +219,3 @@ class UIManager:
                 print(f"[错误] process_scroll 异常: {e}")
 
             window._scroll_y = 0
-
-    def update_markers(self, grid: np.ndarray, dt: float = 1.0, clear_threshold: float = 1e-3):
-        """使用标记系统更新标记位置
-
-        Args:
-            grid: 向量场网格
-            dt: 时间步长
-            clear_threshold: 清除阈值，低于此平均幅值的标记将被清除
-        """
-        self.marker_system.update_markers(grid, dt, clear_threshold)
-

@@ -213,7 +213,7 @@ class CommandInputHandler:
         if input_handler.is_key_pressed(KeyMap.BACKSPACE):
             if not self.was_pressed.get(KeyMap.BACKSPACE, False) and self.command_string:
                 self.command_string = self.command_string[:-1]
-                print(f"\r[指令输入] {self.command_string}_", end='', flush=True)
+                print(f"\r\033[K[指令输入] {self.command_string}", end='', flush=True)
             self.was_pressed[KeyMap.BACKSPACE] = True
         else:
             self.was_pressed[KeyMap.BACKSPACE] = False
@@ -236,14 +236,9 @@ class CommandInputHandler:
                         else:
                             in_quotes = False
                             quote_char = None
-                        self.command_string += char
-                    elif char == ' ' and in_quotes:
-                        # 在引号内允许空格
-                        self.command_string += char
-                    elif char != ' ' or in_quotes:
-                        # 添加字符（非空格或在引号内）
-                        self.command_string += char
-                    print(f"\r[指令输入] {self.command_string}_", end='', flush=True)
+                    # 总是添加字符，包括空格
+                    self.command_string += char
+                    print(f"\r\033[K[指令输入] {self.command_string}", end='', flush=True)
                 self.was_pressed[key] = True
             else:
                 self.was_pressed[key] = False

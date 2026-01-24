@@ -121,7 +121,10 @@ class CommandDemoApp:
             if self.ui_manager.enable_update:
                 add_inward_edge_vectors(self.grid, magnitude=0.5)
                 try:
-                    self.marker_system.update_field_and_markers(self.grid, dt=1.0, gravity=0.0, speed_factor=0.99)
+                    # 从状态管理器获取重力和速度因子参数
+                    gravity = self.app_core.state_manager.get("gravity", 0.0)
+                    speed_factor = self.app_core.state_manager.get("speed_factor", 0.99)
+                    self.marker_system.update_field_and_markers(self.grid, dt=1.0, gravity=gravity, speed_factor=speed_factor)
                 except Exception as e:
                     print(f"[错误] 更新标记异常: {e}")
 
