@@ -173,6 +173,15 @@ class CommandInputHandler:
             KeyMap.COMMA: ',',
             KeyMap.PERIOD: '.',
             KeyMap.SLASH: '/',
+            # 小键盘映射
+            KeyMap.KP_0: '0', KeyMap.KP_1: '1', KeyMap.KP_2: '2', KeyMap.KP_3: '3',
+            KeyMap.KP_4: '4', KeyMap.KP_5: '5', KeyMap.KP_6: '6', KeyMap.KP_7: '7',
+            KeyMap.KP_8: '8', KeyMap.KP_9: '9',
+            KeyMap.KP_DECIMAL: '.',
+            KeyMap.KP_DIVIDE: '/',
+            KeyMap.KP_MULTIPLY: '*',
+            KeyMap.KP_SUBTRACT: '-',
+            KeyMap.KP_ADD: '+',
         }
 
         # 定义Shift按键时的字符映射
@@ -192,6 +201,15 @@ class CommandInputHandler:
             KeyMap.COMMA: '<',
             KeyMap.PERIOD: '>',
             KeyMap.SLASH: '?',
+            # 小键盘映射 (Shift 不影响数字)
+            KeyMap.KP_0: '0', KeyMap.KP_1: '1', KeyMap.KP_2: '2', KeyMap.KP_3: '3',
+            KeyMap.KP_4: '4', KeyMap.KP_5: '5', KeyMap.KP_6: '6', KeyMap.KP_7: '7',
+            KeyMap.KP_8: '8', KeyMap.KP_9: '9',
+            KeyMap.KP_DECIMAL: '.',
+            KeyMap.KP_DIVIDE: '/',
+            KeyMap.KP_MULTIPLY: '*',
+            KeyMap.KP_SUBTRACT: '-',
+            KeyMap.KP_ADD: '+',
         }
 
         # 检查Enter键执行指令
