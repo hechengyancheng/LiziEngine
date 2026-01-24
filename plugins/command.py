@@ -62,7 +62,7 @@ class Command:
         if not parts:
             return "错误: 命令为空"
 
-        cmd = parts[0].lower()
+        cmd = parts[0].lstrip('/').lower()
         if cmd not in self.commands:
             return f"错误: 未知命令 '{cmd}'。可用命令: {', '.join(self.commands.keys())}"
 
@@ -173,6 +173,25 @@ class CommandInputHandler:
             KeyMap.SLASH: '/',
         }
 
+        # 定义Shift按键时的字符映射
+        shifted_key_to_char = {
+            KeyMap.A: 'A', KeyMap.B: 'B', KeyMap.C: 'C', KeyMap.D: 'D', KeyMap.E: 'E',
+            KeyMap.F: 'F', KeyMap.G: 'G', KeyMap.H: 'H', KeyMap.I: 'I', KeyMap.J: 'J',
+            KeyMap.K: 'K', KeyMap.L: 'L', KeyMap.M: 'M', KeyMap.N: 'N', KeyMap.O: 'O',
+            KeyMap.P: 'P', KeyMap.Q: 'Q', KeyMap.R: 'R', KeyMap.S: 'S', KeyMap.T: 'T',
+            KeyMap.U: 'U', KeyMap.V: 'V', KeyMap.W: 'W', KeyMap.X: 'X', KeyMap.Y: 'Y',
+            KeyMap.Z: 'Z',
+            KeyMap._0: ')', KeyMap._1: '!', KeyMap._2: '@', KeyMap._3: '#', KeyMap._4: '$',
+            KeyMap._5: '%', KeyMap._6: '^', KeyMap._7: '&', KeyMap._8: '*', KeyMap._9: '(',
+            KeyMap.MINUS: '_',
+            KeyMap.EQUAL: '+',
+            KeyMap.SEMICOLON: ':',
+            KeyMap.APOSTROPHE: '"',
+            KeyMap.COMMA: '<',
+            KeyMap.PERIOD: '>',
+            KeyMap.SLASH: '?',
+        }
+
         # 检查Enter键执行指令
         if input_handler.is_key_pressed(KeyMap.ENTER):
             if not self.was_pressed.get(KeyMap.ENTER, False):
@@ -202,9 +221,13 @@ class CommandInputHandler:
         # 处理字符输入，支持引号
         in_quotes = False
         quote_char = None
+        shift_pressed = input_handler.is_key_pressed(KeyMap.LEFT_SHIFT) or input_handler.is_key_pressed(KeyMap.RIGHT_SHIFT)
         for key, char in key_to_char.items():
             if input_handler.is_key_pressed(key):
                 if not self.was_pressed.get(key, False):
+                    # 选择映射：Shift按下时使用shifted映射，否则使用普通映射
+                    char_map = shifted_key_to_char if shift_pressed else key_to_char
+                    char = char_map.get(key, char)
                     # 处理引号开始/结束
                     if char in ('"', "'") and (not in_quotes or char == quote_char):
                         if not in_quotes:

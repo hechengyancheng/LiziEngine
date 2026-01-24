@@ -9,11 +9,12 @@ from lizi_engine.input import input_handler, KeyMap, MouseMap
 
 
 class UIManager:
-    def __init__(self, app_core, window, controller, marker_system):
+    def __init__(self, app_core, window, controller, marker_system, command_input_handler=None):
         self.app_core = app_core
         self.window = window
         self.controller = controller
         self.marker_system = marker_system
+        self.command_input_handler = command_input_handler
 
         self.enable_update = True
 
@@ -34,6 +35,9 @@ class UIManager:
         self._grid = grid
 
         def on_space_press():
+            # 检查是否在指令模式，如果是则跳过UI快捷键
+            if self.command_input_handler and self.command_input_handler.command_mode:
+                return
             # 优先使用外部提供的回调（用于切换模式等）
             if callable(on_space):
                 try:
@@ -44,6 +48,9 @@ class UIManager:
             # 无外部回调时不执行默认行为
 
         def on_r_press():
+            # 检查是否在指令模式，如果是则跳过UI快捷键
+            if self.command_input_handler and self.command_input_handler.command_mode:
+                return
             if callable(on_r):
                 try:
                     on_r()
@@ -56,6 +63,9 @@ class UIManager:
                 print(f"[错误] reset_view 异常: {e}")
 
         def on_g_press():
+            # 检查是否在指令模式，如果是则跳过UI快捷键
+            if self.command_input_handler and self.command_input_handler.command_mode:
+                return
             if callable(on_g):
                 try:
                     on_g()
@@ -68,6 +78,9 @@ class UIManager:
                 print(f"[错误] toggle_grid 异常: {e}")
 
         def on_c_press():
+            # 检查是否在指令模式，如果是则跳过UI快捷键
+            if self.command_input_handler and self.command_input_handler.command_mode:
+                return
             if callable(on_c):
                 try:
                     on_c()
@@ -85,6 +98,9 @@ class UIManager:
                 print(f"[错误] clear_markers 异常: {e}")
 
         def on_v_press():
+            # 检查是否在指令模式，如果是则跳过UI快捷键
+            if self.command_input_handler and self.command_input_handler.command_mode:
+                return
             if callable(on_v):
                 try:
                     on_v()
@@ -97,6 +113,9 @@ class UIManager:
                 print(f"[错误] switch_vector_field_direction 异常: {e}")
 
         def on_u_press():
+            # 检查是否在指令模式，如果是则跳过UI快捷键
+            if self.command_input_handler and self.command_input_handler.command_mode:
+                return
             if callable(on_u):
                 try:
                     on_u()
@@ -105,6 +124,9 @@ class UIManager:
                     print(f"[错误] on_u 回调异常: {e}")
 
         def on_f_press():
+            # 检查是否在指令模式，如果是则跳过UI快捷键
+            if self.command_input_handler and self.command_input_handler.command_mode:
+                return
             if callable(on_f):
                 try:
                     on_f()

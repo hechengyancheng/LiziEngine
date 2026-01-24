@@ -81,7 +81,7 @@ class CommandDemoApp:
         self.command_input_handler = CommandInputHandler(self.command_plugin)
 
         # 初始化 UI 管理器
-        self.ui_manager = UIManager(self.app_core, self.window, self.controller, self.marker_system)
+        self.ui_manager = UIManager(self.app_core, self.window, self.controller, self.marker_system, self.command_input_handler)
 
         # 注册基本回调
         def _on_space():
