@@ -10,8 +10,12 @@ from lizi_engine.input import input_handler, KeyMap
 
 
 class Command:
-    def __init__(self, controller, commands_file='plugins/commands.json'):
+    def __init__(self, controller, commands_file=None):
         self.controller = controller
+        if commands_file is None:
+            # 默认路径相对于插件文件位置
+            plugin_dir = os.path.dirname(os.path.abspath(__file__))
+            commands_file = os.path.join(plugin_dir, 'commands.json')
         self.commands_file = commands_file
         self.commands = {}
         self.descriptions = {}
@@ -137,6 +141,7 @@ class CommandInputHandler:
         self.command_plugin = command_plugin
         self.command_mode = False
         self.command_string = ""
+        self.cursor_pos = 0
         self.was_pressed = {}
         self.history_file = history_file
         self.history = []
@@ -174,6 +179,7 @@ class CommandInputHandler:
         if not self.command_mode:
             self.command_mode = True
             self.command_string = ""
+            self.cursor_pos = 0
             print("[指令模式] 已激活 - 输入指令后按Enter执行，按ESC取消")
         else:
             self.command_mode = False
@@ -182,6 +188,16 @@ class CommandInputHandler:
     def get_toggle_callback(self):
         """获取切换指令模式的回调函数"""
         return self.toggle_command_mode
+
+    def _display_command(self):
+        """显示命令字符串，使用终端光标表示位置"""
+        print("\033[?25l", end='', flush=True)  # 隐藏终端光标
+        print(f"\r\033[K[指令输入] {self.command_string}", end='', flush=True)
+        # 移动光标到正确位置
+        if self.cursor_pos < len(self.command_string):
+            move_left = len(self.command_string) - self.cursor_pos
+            print(f"\033[{move_left}D", end='', flush=True)
+        print("\033[?25h", end='', flush=True)  # 显示终端光标
 
     def _handle_command_input(self):
         """处理指令输入，支持引号字符串"""
@@ -261,9 +277,10 @@ class CommandInputHandler:
 
         # 检查Backspace键删除字符
         if input_handler.is_key_pressed(KeyMap.BACKSPACE):
-            if not self.was_pressed.get(KeyMap.BACKSPACE, False) and self.command_string:
-                self.command_string = self.command_string[:-1]
-                print(f"\r\033[K[指令输入] {self.command_string}", end='', flush=True)
+            if not self.was_pressed.get(KeyMap.BACKSPACE, False) and self.cursor_pos > 0:
+                self.command_string = self.command_string[:self.cursor_pos-1] + self.command_string[self.cursor_pos:]
+                self.cursor_pos -= 1
+                self._display_command()
             self.was_pressed[KeyMap.BACKSPACE] = True
         else:
             self.was_pressed[KeyMap.BACKSPACE] = False
@@ -276,7 +293,8 @@ class CommandInputHandler:
                     self.temp_command = self.command_string
                 self.history_index = min(self.history_index + 1, len(self.history) - 1)
                 self.command_string = self.history[len(self.history) - 1 - self.history_index]
-                print(f"\r\033[K[指令输入] {self.command_string}", end='', flush=True)
+                self.cursor_pos = len(self.command_string)
+                self._display_command()
             self.was_pressed[KeyMap.UP] = True
         else:
             self.was_pressed[KeyMap.UP] = False
@@ -290,10 +308,29 @@ class CommandInputHandler:
                     self.command_string = getattr(self, 'temp_command', "")
                 else:
                     self.command_string = self.history[len(self.history) - 1 - self.history_index]
-                print(f"\r\033[K[指令输入] {self.command_string}", end='', flush=True)
+                self.cursor_pos = len(self.command_string)
+                self._display_command()
             self.was_pressed[KeyMap.DOWN] = True
         else:
             self.was_pressed[KeyMap.DOWN] = False
+
+        # 检查LEFT键移动光标向左
+        if input_handler.is_key_pressed(KeyMap.LEFT):
+            if not self.was_pressed.get(KeyMap.LEFT, False):
+                self.cursor_pos = max(0, self.cursor_pos - 1)
+                self._display_command()
+            self.was_pressed[KeyMap.LEFT] = True
+        else:
+            self.was_pressed[KeyMap.LEFT] = False
+
+        # 检查RIGHT键移动光标向右
+        if input_handler.is_key_pressed(KeyMap.RIGHT):
+            if not self.was_pressed.get(KeyMap.RIGHT, False):
+                self.cursor_pos = min(len(self.command_string), self.cursor_pos + 1)
+                self._display_command()
+            self.was_pressed[KeyMap.RIGHT] = True
+        else:
+            self.was_pressed[KeyMap.RIGHT] = False
 
         # 处理字符输入，支持引号
         in_quotes = False
@@ -313,9 +350,10 @@ class CommandInputHandler:
                         else:
                             in_quotes = False
                             quote_char = None
-                    # 总是添加字符，包括空格
-                    self.command_string += char
-                    print(f"\r\033[K[指令输入] {self.command_string}", end='', flush=True)
+                    # 在光标位置插入字符
+                    self.command_string = self.command_string[:self.cursor_pos] + char + self.command_string[self.cursor_pos:]
+                    self.cursor_pos += 1
+                    self._display_command()
                 self.was_pressed[key] = True
             else:
                 self.was_pressed[key] = False
