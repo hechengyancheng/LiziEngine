@@ -6,6 +6,7 @@ import inspect
 import json
 import os
 import logging
+from lizi_engine.input import input_handler, KeyMap
 
 
 class Command:
@@ -125,3 +126,114 @@ class Command:
         if no_param:
             self.no_param_commands.add(cmd)
         self.logger.info(f"Registered new command '{cmd}' (no_param: {no_param})")
+
+
+class CommandInputHandler:
+    """指令输入处理器，处理指令模式的切换和输入"""
+
+    def __init__(self, command_plugin):
+        self.command_plugin = command_plugin
+        self.command_mode = False
+        self.command_string = ""
+        self.was_pressed = {}
+
+    def toggle_command_mode(self):
+        """切换指令输入模式"""
+        if not self.command_mode:
+            self.command_mode = True
+            self.command_string = ""
+            print("[指令模式] 已激活 - 输入指令后按Enter执行，按ESC取消")
+        else:
+            self.command_mode = False
+            print("[指令模式] 已退出")
+
+    def get_toggle_callback(self):
+        """获取切换指令模式的回调函数"""
+        return self.toggle_command_mode
+
+    def _handle_command_input(self):
+        """处理指令输入，支持引号字符串"""
+        # 定义按键到字符的映射
+        key_to_char = {
+            KeyMap.A: 'a', KeyMap.B: 'b', KeyMap.C: 'c', KeyMap.D: 'd', KeyMap.E: 'e',
+            KeyMap.F: 'f', KeyMap.G: 'g', KeyMap.H: 'h', KeyMap.I: 'i', KeyMap.J: 'j',
+            KeyMap.K: 'k', KeyMap.L: 'l', KeyMap.M: 'm', KeyMap.N: 'n', KeyMap.O: 'o',
+            KeyMap.P: 'p', KeyMap.Q: 'q', KeyMap.R: 'r', KeyMap.S: 's', KeyMap.T: 't',
+            KeyMap.U: 'u', KeyMap.V: 'v', KeyMap.W: 'w', KeyMap.X: 'x', KeyMap.Y: 'y',
+            KeyMap.Z: 'z',
+            KeyMap._0: '0', KeyMap._1: '1', KeyMap._2: '2', KeyMap._3: '3', KeyMap._4: '4',
+            KeyMap._5: '5', KeyMap._6: '6', KeyMap._7: '7', KeyMap._8: '8', KeyMap._9: '9',
+            KeyMap.SPACE: ' ',
+            KeyMap.MINUS: '-',
+            KeyMap.EQUAL: '=',
+            KeyMap.SEMICOLON: ';',
+            KeyMap.APOSTROPHE: "'",
+            KeyMap.COMMA: ',',
+            KeyMap.PERIOD: '.',
+            KeyMap.SLASH: '/',
+        }
+
+        # 检查Enter键执行指令
+        if input_handler.is_key_pressed(KeyMap.ENTER):
+            if not self.was_pressed.get(KeyMap.ENTER, False):
+                self._execute_command()
+            self.was_pressed[KeyMap.ENTER] = True
+        else:
+            self.was_pressed[KeyMap.ENTER] = False
+
+        # 检查ESC键退出指令模式
+        if input_handler.is_key_pressed(KeyMap.ESCAPE):
+            if not self.was_pressed.get(KeyMap.ESCAPE, False):
+                self.command_mode = False
+                print("[指令模式] 已退出")
+            self.was_pressed[KeyMap.ESCAPE] = True
+        else:
+            self.was_pressed[KeyMap.ESCAPE] = False
+
+        # 检查Backspace键删除字符
+        if input_handler.is_key_pressed(KeyMap.BACKSPACE):
+            if not self.was_pressed.get(KeyMap.BACKSPACE, False) and self.command_string:
+                self.command_string = self.command_string[:-1]
+                print(f"[指令输入] {self.command_string}_")
+            self.was_pressed[KeyMap.BACKSPACE] = True
+        else:
+            self.was_pressed[KeyMap.BACKSPACE] = False
+
+        # 处理字符输入，支持引号
+        in_quotes = False
+        quote_char = None
+        for key, char in key_to_char.items():
+            if input_handler.is_key_pressed(key):
+                if not self.was_pressed.get(key, False):
+                    # 处理引号开始/结束
+                    if char in ('"', "'") and (not in_quotes or char == quote_char):
+                        if not in_quotes:
+                            in_quotes = True
+                            quote_char = char
+                        else:
+                            in_quotes = False
+                            quote_char = None
+                        self.command_string += char
+                    elif char == ' ' and in_quotes:
+                        # 在引号内允许空格
+                        self.command_string += char
+                    elif char != ' ' or in_quotes:
+                        # 添加字符（非空格或在引号内）
+                        self.command_string += char
+                    print(f"[指令输入] {self.command_string}_")
+                self.was_pressed[key] = True
+            else:
+                self.was_pressed[key] = False
+
+    def _execute_command(self):
+        """执行指令"""
+        if not self.command_string.strip():
+            print("[指令] 指令为空")
+            self.command_mode = False
+            return
+
+        print(f"[指令] 执行: {self.command_string}")
+        result = self.command_plugin.execute(self.command_string)
+        print(f"[指令] 结果: {result}")
+
+        self.command_mode = False
