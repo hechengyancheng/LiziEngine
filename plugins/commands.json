@@ -1,0 +1,20 @@
+{
+    "commands": {
+        "reset_view": "reset_view",
+        "toggle_grid": "toggle_grid",
+        "clear_grid": "clear_grid",
+        "switch_direction": "switch_vector_field_direction"
+    },
+    "descriptions": {
+        "reset_view": "重置视图到初始状态",
+        "toggle_grid": "切换网格显示",
+        "clear_grid": "清除网格内容",
+        "switch_direction": "切换向量场方向"
+    },
+    "no_param_commands": [
+        "reset_view",
+        "toggle_grid",
+        "clear_grid",
+        "switch_direction"
+    ]
+}
