@@ -62,6 +62,82 @@ class Controller:
         except Exception as e:
             print(f"[错误] 切换向量场方向 异常: {e}")
 
+    def add_marker(self, x: float, y: float, mag: float = 1.0):
+        """在指定位置添加标记"""
+        try:
+            self.marker_system.add_marker(float(x), float(y), float(mag))
+            print(f"[控制器] 已添加标记: 位置({x}, {y}), 幅值{mag}")
+        except Exception as e:
+            print(f"[错误] 添加标记异常: {e}")
+
+    def clear_markers(self):
+        """清除所有标记"""
+        try:
+            self.marker_system.clear_markers()
+            print("[控制器] 已清除所有标记")
+        except Exception as e:
+            print(f"[错误] 清除标记异常: {e}")
+
+    def create_radial_pattern(self, center_x: float, center_y: float, radius: float, magnitude: float):
+        """创建径向向量场模式"""
+        try:
+            self.vector_calculator.create_radial_pattern(
+                self.grid,
+                center=(float(center_x), float(center_y)),
+                radius=float(radius),
+                magnitude=float(magnitude)
+            )
+            print(f"[控制器] 已创建径向模式: 中心({center_x}, {center_y}), 半径{radius}, 幅值{magnitude}")
+        except Exception as e:
+            print(f"[错误] 创建径向模式异常: {e}")
+
+    def create_tangential_pattern(self, center_x: float, center_y: float, radius: float, magnitude: float):
+        """创建切线向量场模式"""
+        try:
+            self.vector_calculator.create_tangential_pattern(
+                self.grid,
+                center=(float(center_x), float(center_y)),
+                radius=float(radius),
+                magnitude=float(magnitude)
+            )
+            print(f"[控制器] 已创建切线模式: 中心({center_x}, {center_y}), 半径{radius}, 幅值{magnitude}")
+        except Exception as e:
+            print(f"[错误] 创建切线模式异常: {e}")
+
+    def set_compute_device(self, device: str):
+        """设置计算设备"""
+        try:
+            if device.lower() not in ["cpu", "gpu"]:
+                print(f"[错误] 无效的设备类型: {device}，应为 'cpu' 或 'gpu'")
+                return
+            success = self.vector_calculator.set_device(device.lower())
+            if success:
+                print(f"[控制器] 计算设备已设置为: {device.upper()}")
+            else:
+                print(f"[错误] 无法设置为设备: {device.upper()}")
+        except Exception as e:
+            print(f"[错误] 设置计算设备异常: {e}")
+
+    def set_gravity(self, value: float):
+        """设置重力加速度"""
+        try:
+            # 这里需要通过状态管理器或其他方式设置重力值
+            # 假设重力值存储在状态管理器中
+            self.app_core.state_manager.set("gravity", float(value))
+            print(f"[控制器] 重力加速度已设置为: {value}")
+        except Exception as e:
+            print(f"[错误] 设置重力异常: {e}")
+
+    def set_speed_factor(self, value: float):
+        """设置速度衰减因子"""
+        try:
+            # 这里需要通过状态管理器或其他方式设置速度因子
+            # 假设速度因子存储在状态管理器中
+            self.app_core.state_manager.set("speed_factor", float(value))
+            print(f"[控制器] 速度衰减因子已设置为: {value}")
+        except Exception as e:
+            print(f"[错误] 设置速度因子异常: {e}")
+
     def place_vector_field(self, mx: float, my: float):
         """在鼠标位置放置向量场"""
         try:

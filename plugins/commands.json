@@ -1,0 +1,35 @@
+{
+    "commands": {
+        "reset_view": "reset_view",
+        "toggle_grid": "toggle_grid",
+        "clear_grid": "clear_grid",
+        "switch_direction": "switch_vector_field_direction",
+        "add_marker": "add_marker",
+        "clear_markers": "clear_markers",
+        "create_radial": "create_radial_pattern",
+        "create_tangential": "create_tangential_pattern",
+        "set_device": "set_compute_device",
+        "set_gravity": "set_gravity",
+        "set_speed_factor": "set_speed_factor"
+    },
+    "descriptions": {
+        "reset_view": "重置视图到初始状态",
+        "toggle_grid": "切换网格显示",
+        "clear_grid": "清除网格内容",
+        "switch_direction": "切换向量场方向",
+        "add_marker": "在指定位置添加标记 (参数: x y mag)",
+        "clear_markers": "清除所有标记",
+        "create_radial": "创建径向向量场模式 (参数: center_x center_y radius magnitude)",
+        "create_tangential": "创建切线向量场模式 (参数: center_x center_y radius magnitude)",
+        "set_device": "设置计算设备 (参数: cpu|gpu)",
+        "set_gravity": "设置重力加速度 (参数: value)",
+        "set_speed_factor": "设置速度衰减因子 (参数: value)"
+    },
+    "no_param_commands": [
+        "reset_view",
+        "toggle_grid",
+        "clear_grid",
+        "switch_direction",
+        "clear_markers"
+    ]
+}
