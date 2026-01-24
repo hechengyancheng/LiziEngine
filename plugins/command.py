@@ -213,7 +213,7 @@ class CommandInputHandler:
         if input_handler.is_key_pressed(KeyMap.BACKSPACE):
             if not self.was_pressed.get(KeyMap.BACKSPACE, False) and self.command_string:
                 self.command_string = self.command_string[:-1]
-                print(f"[指令输入] {self.command_string}_")
+                print(f"\r[指令输入] {self.command_string}_", end='', flush=True)
             self.was_pressed[KeyMap.BACKSPACE] = True
         else:
             self.was_pressed[KeyMap.BACKSPACE] = False
@@ -243,7 +243,7 @@ class CommandInputHandler:
                     elif char != ' ' or in_quotes:
                         # 添加字符（非空格或在引号内）
                         self.command_string += char
-                    print(f"[指令输入] {self.command_string}_")
+                    print(f"\r[指令输入] {self.command_string}_", end='', flush=True)
                 self.was_pressed[key] = True
             else:
                 self.was_pressed[key] = False
@@ -251,11 +251,11 @@ class CommandInputHandler:
     def _execute_command(self):
         """执行指令"""
         if not self.command_string.strip():
-            print("[指令] 指令为空")
+            print("\n[指令] 指令为空")
             self.command_mode = False
             return
 
-        print(f"[指令] 执行: {self.command_string}")
+        print(f"\n[指令] 执行: {self.command_string}")
         result = self.command_plugin.execute(self.command_string)
         print(f"[指令] 结果: {result}")
 
