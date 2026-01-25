@@ -1,7 +1,7 @@
 {
     "grid_width": 640,
     "grid_height": 480,
-    "cell_size": 1.0,
+    "cell_size": 4.0,
     "vector_color": [
         0.2,
         0.6,
