@@ -57,6 +57,9 @@ class MPMSystem:
         self.restitution = restitution  # 恢复系数（弹性碰撞）
         self.friction = friction  # 摩擦系数
 
+        # Clamp Poisson ratio to valid range to prevent division by zero in lambda calculation
+        self.poisson_ratio = max(0.0, min(0.499, self.poisson_ratio))
+
         # 计算Lame参数
         self.mu = self.young_modulus / (2 * (1 + self.poisson_ratio))  # 剪切模量
         self.lambda_ = self.young_modulus * self.poisson_ratio / ((1 + self.poisson_ratio) * (1 - 2 * self.poisson_ratio))  # 第一Lame参数
@@ -187,7 +190,15 @@ class MPMSystem:
 
             dev_b = b - (np.trace(b) / 2) * np.eye(2)  # 偏应力部分
 
-            sigma = (self.mu / J) * dev_b + (self.lambda_ * (J - 1) / J) * np.eye(2)
+            # Compute stress terms separately to avoid invalid value warnings
+            term1 = (self.mu / J) * dev_b
+            term2 = (self.lambda_ * (J - 1) / J) * np.eye(2)
+
+            # Check for invalid values before addition
+            if not np.all(np.isfinite(term1)) or not np.all(np.isfinite(term2)):
+                sigma = np.zeros((2, 2))
+            else:
+                sigma = term1 + term2
 
             # 检查应力是否有效
             if not np.all(np.isfinite(sigma)):

@@ -104,9 +104,6 @@ def main():
         # 更新窗口和处理 UI 事件
         window.update()
 
-        # 清空网格
-        grid.fill(0.0)
-
         # 处理鼠标拖动与滚轮
         try:
             ui_manager.process_mouse_drag()
