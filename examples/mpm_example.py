@@ -97,6 +97,9 @@ def main():
     # 注册回调
     ui_manager.register_callbacks(grid, on_space=on_space_press, on_c=on_c_press, on_u=on_u_press)
 
+    # 用于跟踪鼠标按键状态，避免连续添加粒子
+    left_mouse_pressed_last_frame = False
+
     while not window.should_close:
         # 更新窗口和处理 UI 事件
         window.update()
@@ -114,8 +117,9 @@ def main():
 
         # 处理鼠标点击添加粒子
         if ui_manager.enable_update:
-            # 检查鼠标输入
-            if input_handler.is_mouse_button_pressed(MouseMap.LEFT):
+            # 检查鼠标输入 - 只在按下瞬间添加粒子，避免连续添加
+            left_mouse_pressed = input_handler.is_mouse_button_pressed(MouseMap.LEFT)
+            if left_mouse_pressed and not left_mouse_pressed_last_frame:
                 # 获取鼠标位置并转换为网格坐标
                 mouse_x, mouse_y = input_handler.get_mouse_position()
                 grid_x, grid_y = controller._screen_to_grid(mouse_x, mouse_y)
@@ -123,6 +127,9 @@ def main():
                 if 0 <= grid_x < 64 and 0 <= grid_y < 64:
                     mpm_system.add_particle(grid_x, grid_y, mass=1.0, vx=0.0, vy=0.0)
                     print(f"[MPM示例] 添加粒子于 ({grid_x:.2f}, {grid_y:.2f})")
+
+            # 更新上一帧的鼠标状态
+            left_mouse_pressed_last_frame = left_mouse_pressed
 
             # 执行MPM步骤
             mpm_system.step(grid)
