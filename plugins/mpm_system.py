@@ -304,9 +304,9 @@ class MPMSystem:
                 self.grid_force[ny, nx, 0] -= particle.volume * stress_div_x[i]
                 self.grid_force[ny, nx, 1] -= particle.volume * stress_div_y[i]
 
-        # 添加重力（在力映射之前）
+        # 添加重力（作为力）
         mask = self.grid_mass > 0
-        self.grid_velocity[mask, 1] += self.gravity * self.dt
+        self.grid_force[mask, 1] += self.gravity * self.grid_mass[mask]
 
         # 更新网格速度（应用力）
         self.grid_velocity[mask, 0] += self.dt * self.grid_force[mask, 0] / self.grid_mass[mask]
