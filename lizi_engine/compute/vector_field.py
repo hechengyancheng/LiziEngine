@@ -104,26 +104,6 @@ class VectorFieldCalculator(EventHandler):
 
         return calculator.create_vector_grid(width, height, default)
 
-    def create_radial_pattern(self, grid: np.ndarray, center: Tuple[float, float] = None,
-                            radius: float = None, magnitude: float = 1.0) -> np.ndarray:
-        """在网格上创建径向向量模式"""
-        # 根据当前设备选择计算器
-        calculator = self._gpu_calculator if self._current_device == "gpu" and self._gpu_calculator else self._cpu_calculator
-
-        result = calculator.create_radial_pattern(grid, center, radius, magnitude)
-
-        return result
-
-    def create_tangential_pattern(self, grid: np.ndarray, center: Tuple[float, float] = None,
-                               radius: float = None, magnitude: float = 1.0) -> np.ndarray:
-        """在网格上创建切线向量模式（旋转）"""
-        # 根据当前设备选择计算器
-        calculator = self._gpu_calculator if self._current_device == "gpu" and self._gpu_calculator else self._cpu_calculator
-
-        result = calculator.create_tangential_pattern(grid, center, radius, magnitude)
-
-        return result
-
     def create_tiny_vector(self, grid: np.ndarray, x: float, y: float, mag: float = 1.0) -> None:
         """在指定位置创建一个微小的向量场影响,只影响位置本身及上下左右四个邻居"""
         # 根据当前设备选择计算器
@@ -161,6 +141,25 @@ class VectorFieldCalculator(EventHandler):
         calculator = self._gpu_calculator if self._current_device == "gpu" and self._gpu_calculator else self._cpu_calculator
 
         return calculator.fit_vector_at_position(grid, x, y)
+
+    def fit_vectors_at_positions_batch(self, grid: np.ndarray, positions: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
+        """批量拟合多个位置的向量值
+
+        Args:
+            grid: 向量场网格
+            positions: 位置列表，每个元素为 (x, y) 元组
+
+        Returns:
+            向量列表，每个元素为 (vx, vy) 元组
+        """
+        # 根据当前设备选择计算器
+        calculator = self._gpu_calculator if self._current_device == "gpu" and self._gpu_calculator else self._cpu_calculator
+
+        if hasattr(calculator, 'fit_vectors_at_positions_batch'):
+            return calculator.fit_vectors_at_positions_batch(grid, positions)
+        else:
+            # 如果计算器不支持批量处理，回退到逐个处理
+            return [calculator.fit_vector_at_position(grid, x, y) for x, y in positions]
 
     def handle(self, event: Event) -> None:
         """处理事件"""

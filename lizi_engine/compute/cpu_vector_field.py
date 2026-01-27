@@ -83,96 +83,6 @@ class CPUVectorFieldCalculator:
             grid[:, :, 1] = default[1]
         return grid
 
-    def create_radial_pattern(self, grid: np.ndarray, center: Tuple[float, float] = None,
-                            radius: float = None, magnitude: float = 1.0) -> np.ndarray:
-        """在网格上创建径向向量模式"""
-        if grid is None or not isinstance(grid, np.ndarray):
-            raise TypeError("grid 必须是 numpy.ndarray 类型")
-
-        h, w = grid.shape[:2]
-
-        # 如果未指定中心，则使用网格中心
-        if center is None:
-            center = (w // 2, h // 2)
-
-        # 如果未指定半径，则使用网格尺寸的1/4
-        if radius is None:
-            radius = min(w, h) // 4
-
-        cx, cy = center
-
-        # 创建坐标网格
-        y_coords, x_coords = np.mgrid[0:h, 0:w]
-
-        # 计算每个点到中心的距离和方向
-        dx = x_coords - cx
-        dy = y_coords - cy
-        dist = np.sqrt(dx**2 + dy**2)
-
-        # 创建掩码：只处理在半径内的点
-        mask = (dist <= radius)
-
-        # 计算径向角度
-        angle = np.arctan2(dy, dx)
-
-        # 计算向量大小（从中心向外递减）
-        vec_magnitude = magnitude * (1.0 - (dist / radius))
-
-        # 计算向量分量
-        vx = vec_magnitude * np.cos(angle)
-        vy = vec_magnitude * np.sin(angle)
-
-        # 应用到网格
-        grid[mask, 0] += vx[mask]
-        grid[mask, 1] += vy[mask]
-
-        return grid
-
-    def create_tangential_pattern(self, grid: np.ndarray, center: Tuple[float, float] = None,
-                               radius: float = None, magnitude: float = 1.0) -> np.ndarray:
-        """在网格上创建切线向量模式（旋转）"""
-        if grid is None or not isinstance(grid, np.ndarray):
-            raise TypeError("grid 必须是 numpy.ndarray 类型")
-
-        h, w = grid.shape[:2]
-
-        # 如果未指定中心，则使用网格中心
-        if center is None:
-            center = (w // 2, h // 2)
-
-        # 如果未指定半径，则使用网格尺寸的1/4
-        if radius is None:
-            radius = min(w, h) // 4
-
-        cx, cy = center
-
-        # 创建坐标网格
-        y_coords, x_coords = np.mgrid[0:h, 0:w]
-
-        # 计算每个点到中心的距离和方向
-        dx = x_coords - cx
-        dy = y_coords - cy
-        dist = np.sqrt(dx**2 + dy**2)
-
-        # 创建掩码：只处理在半径内的点
-        mask = (dist <= radius)
-
-        # 计算切线角度（径向角度+90度）
-        angle = np.arctan2(dy, dx) + np.pi/2
-
-        # 计算向量大小（从中心向外递减）
-        vec_magnitude = magnitude * (1.0 - (dist / radius))
-
-        # 计算向量分量
-        vx = vec_magnitude * np.cos(angle)
-        vy = vec_magnitude * np.sin(angle)
-
-        # 应用到网格
-        grid[mask, 0] += vx[mask]
-        grid[mask, 1] += vy[mask]
-
-        return grid
-
     def create_tiny_vector(self, grid: np.ndarray, x: float, y: float, mag: float = 1.0) -> None:
         """在指定位置创建一个微小的向量场影响,只影响位置本身及上下左右四个邻居"""
         if not hasattr(grid, "ndim"):
@@ -285,3 +195,19 @@ class CPUVectorFieldCalculator:
         vy = (1 - wx) * (1 - wy) * v00[1] + wx * (1 - wy) * v01[1] + (1 - wx) * wy * v10[1] + wx * wy * v11[1]
 
         return (vx, vy)
+
+    def fit_vectors_at_positions_batch(self, grid: np.ndarray, positions: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
+        """批量拟合多个位置的向量值，使用CPU并行处理
+
+        Args:
+            grid: 向量场网格
+            positions: 位置列表，每个元素为 (x, y) 元组
+
+        Returns:
+            向量列表，每个元素为 (vx, vy) 元组
+        """
+        if not hasattr(grid, "ndim") or grid.ndim < 3 or grid.shape[2] < 2 or not positions:
+            return [(0.0, 0.0)] * len(positions)
+
+        # 使用列表推导式批量处理
+        return [self.fit_vector_at_position(grid, x, y) for x, y in positions]

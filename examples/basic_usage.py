@@ -43,9 +43,6 @@ def main():
     # 获取网格
     grid = app_core.grid_manager.init_grid(64, 64)
 
-    # 设置示例向量场 - 创建旋转模式
-    vector_calculator.create_tangential_pattern(grid, magnitude=1.0)
-
     # 初始化视图
     try:
         app_core.view_manager.reset_view(grid.shape[1], grid.shape[0])
@@ -66,16 +63,7 @@ def main():
     # 初始化 UI 管理器并注册回调（与 patterns.py 保持一致）
     ui_manager = UIManager(app_core, window, controller, marker_system)
 
-    def _on_space():
-        # 空格键：重新生成切线模式并重置视图
-        print("[示例] 重新生成切线模式")
-        vector_calculator.create_tangential_pattern(grid, magnitude=1.0)
-        try:
-            app_core.view_manager.reset_view(grid.shape[1], grid.shape[0])
-        except Exception:
-            pass
-
-    ui_manager.register_callbacks(grid, on_space=_on_space)
+    ui_manager.register_callbacks(grid)
 
     while not window.should_close:
         # 更新窗口和处理 UI 事件

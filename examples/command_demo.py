@@ -59,9 +59,6 @@ class CommandDemoApp:
         # 获取网格
         self.grid = self.app_core.grid_manager.init_grid(64, 64)
 
-        # 设置示例向量场
-        vector_calculator.create_tangential_pattern(self.grid, magnitude=1.0)
-
         # 初始化视图
         try:
             self.app_core.view_manager.reset_view(self.grid.shape[1], self.grid.shape[0])
@@ -83,15 +80,7 @@ class CommandDemoApp:
         # 初始化 UI 管理器
         self.ui_manager = UIManager(self.app_core, self.window, self.controller, self.marker_system, self.command_input_handler)
 
-        # 注册基本回调
-        def _on_space():
-            vector_calculator.create_tangential_pattern(self.grid, magnitude=1.0)
-            try:
-                self.app_core.view_manager.reset_view(self.grid.shape[1], self.grid.shape[0])
-            except Exception:
-                pass
-
-        self.ui_manager.register_callbacks(self.grid, on_space=_on_space)
+        self.ui_manager.register_callbacks(self.grid)
 
         # 注册指令模式切换回调
         input_handler.register_key_callback(KeyMap.SLASH, MouseMap.PRESS, self.command_input_handler.get_toggle_callback())

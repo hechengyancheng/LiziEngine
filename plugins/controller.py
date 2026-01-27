@@ -78,32 +78,6 @@ class Controller:
         except Exception as e:
             print(f"[错误] 清除标记异常: {e}")
 
-    def create_radial_pattern(self, center_x: float, center_y: float, radius: float, magnitude: float):
-        """创建径向向量场模式"""
-        try:
-            self.vector_calculator.create_radial_pattern(
-                self.grid,
-                center=(float(center_x), float(center_y)),
-                radius=float(radius),
-                magnitude=float(magnitude)
-            )
-            print(f"[控制器] 已创建径向模式: 中心({center_x}, {center_y}), 半径{radius}, 幅值{magnitude}")
-        except Exception as e:
-            print(f"[错误] 创建径向模式异常: {e}")
-
-    def create_tangential_pattern(self, center_x: float, center_y: float, radius: float, magnitude: float):
-        """创建切线向量场模式"""
-        try:
-            self.vector_calculator.create_tangential_pattern(
-                self.grid,
-                center=(float(center_x), float(center_y)),
-                radius=float(radius),
-                magnitude=float(magnitude)
-            )
-            print(f"[控制器] 已创建切线模式: 中心({center_x}, {center_y}), 半径{radius}, 幅值{magnitude}")
-        except Exception as e:
-            print(f"[错误] 创建切线模式异常: {e}")
-
     def set_compute_device(self, device: str):
         """设置计算设备"""
         try:

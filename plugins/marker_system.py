@@ -77,15 +77,21 @@ class MarkerSystem:
         new_markers = []
         tiny_vector_positions = []  # 收集需要创建微小向量影响的位置
 
-        for m in self.markers:
+        # 收集所有标记位置以进行批量拟合
+        marker_positions = [(m["x"], m["y"]) for m in self.markers]
+
+        # 批量拟合所有标记位置的向量值
+        fitted_vectors = self.vector_calculator.fit_vectors_at_positions_batch(grid, marker_positions)
+
+        for i, m in enumerate(self.markers):
             x = m["x"]
             y = m["y"]
             mag = m["mag"]
             vx = m["vx"]
             vy = m["vy"]
             try:
-                # 在浮点坐标处拟合向量值
-                fitted_vx, fitted_vy = self.fit_vector_at_position(grid, x, y)
+                # 从批量结果中获取拟合向量值
+                fitted_vx, fitted_vy = fitted_vectors[i]
 
                 # 设置标记的速度属性
                 vx += fitted_vx * 1/mag
