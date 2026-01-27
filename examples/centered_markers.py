@@ -41,7 +41,7 @@ def main():
         return
 
     # 获取网格
-    grid = app_core.grid_manager.init_grid(128, 128)
+    grid = app_core.grid_manager.init_grid(256, 256)
 
     # 初始化视图
     try:
@@ -72,10 +72,10 @@ def main():
     # 注册回调
     ui_manager.register_callbacks(grid, on_u=on_u_press)
 
-    # 初始化1500个标记在中心附近
+    # 初始化5000个标记在中心附近
     center_x = grid.shape[1] // 2
     center_y = grid.shape[0] // 2
-    for _ in range(1500):
+    for _ in range(5000):
         offset_x = random.uniform(-5, 5)
         offset_y = random.uniform(-5, 5)
         marker_system.add_marker(center_x + offset_x, center_y + offset_y)
@@ -98,12 +98,12 @@ def main():
         # 实时更新向量场（如果启用）
         if ui_manager.enable_update:
             # 创建边缘向内向量
-            add_inward_edge_vectors(grid, magnitude=0.5)
+            add_inward_edge_vectors(grid, magnitude=0.1)
 
             # 更新标记位置（可选）
             try:
                 # 更新向量场和标记
-                marker_system.update_field_and_markers(grid, dt=1.0, gravity=0.01, speed_factor=0.98)
+                marker_system.update_field_and_markers(grid, dt=1.0, gravity=0.0, speed_factor=0.99)
             except Exception as e:
                 print(f"[错误] 更新标记异常: {e}")
 
