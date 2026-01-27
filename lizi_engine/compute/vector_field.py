@@ -142,6 +142,25 @@ class VectorFieldCalculator(EventHandler):
 
         return calculator.fit_vector_at_position(grid, x, y)
 
+    def fit_vectors_at_positions_batch(self, grid: np.ndarray, positions: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
+        """批量拟合多个位置的向量值
+
+        Args:
+            grid: 向量场网格
+            positions: 位置列表，每个元素为 (x, y) 元组
+
+        Returns:
+            向量列表，每个元素为 (vx, vy) 元组
+        """
+        # 根据当前设备选择计算器
+        calculator = self._gpu_calculator if self._current_device == "gpu" and self._gpu_calculator else self._cpu_calculator
+
+        if hasattr(calculator, 'fit_vectors_at_positions_batch'):
+            return calculator.fit_vectors_at_positions_batch(grid, positions)
+        else:
+            # 如果计算器不支持批量处理，回退到逐个处理
+            return [calculator.fit_vector_at_position(grid, x, y) for x, y in positions]
+
     def handle(self, event: Event) -> None:
         """处理事件"""
         if event.type == EventType.APP_INITIALIZED:

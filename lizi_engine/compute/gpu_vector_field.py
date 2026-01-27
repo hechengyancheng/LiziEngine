@@ -222,16 +222,66 @@ class GPUVectorFieldCalculator:
         }
         """
 
+        # 批量拟合向量程序
+        fit_vectors_at_positions_batch_kernel = """
+        __kernel void fit_vectors_at_positions_batch_kernel(
+            __global const float2* grid,
+            __global const float* positions,
+            __global float2* results,
+            const int width,
+            const int height,
+            const int num_positions
+        ) {
+            const int pos_idx = get_global_id(0);
+
+            if (pos_idx >= num_positions) {
+                return;
+            }
+
+            // 获取当前位置
+            int pos_base_idx = pos_idx * 2;
+            float x = clamp(positions[pos_base_idx], 0.0f, (float)(width - 1));
+            float y = clamp(positions[pos_base_idx + 1], 0.0f, (float)(height - 1));
+
+            // 计算四个最近的整数坐标
+            int x0 = (int)floor(x);
+            int x1 = min(x0 + 1, width - 1);
+            int y0 = (int)floor(y);
+            int y1 = min(y0 + 1, height - 1);
+
+            // 获取四个角的向量值
+            float2 v00 = grid[y0 * width + x0];
+            float2 v01 = grid[y0 * width + x1];
+            float2 v10 = grid[y1 * width + x0];
+            float2 v11 = grid[y1 * width + x1];
+
+            // 计算插值权重
+            float wx = x - (float)x0;
+            float wy = y - (float)y0;
+
+            // 双线性插值
+            float vx = (1.0f - wx) * (1.0f - wy) * v00.x + wx * (1.0f - wy) * v01.x +
+                      (1.0f - wx) * wy * v10.x + wx * wy * v11.x;
+            float vy = (1.0f - wx) * (1.0f - wy) * v00.y + wx * (1.0f - wy) * v01.y +
+                      (1.0f - wx) * wy * v10.y + wx * wy * v11.y;
+
+            // 存储结果
+            results[pos_idx] = (float2)(vx, vy);
+        }
+        """
+
         # 编译程序
         try:
             self._programs['sum_adjacent_vectors'] = cl.Program(self._ctx, sum_adjacent_kernel).build()
             self._programs['update_grid_with_adjacent_sum'] = cl.Program(self._ctx, update_grid_kernel).build()
             self._programs['create_tiny_vectors_batch'] = cl.Program(self._ctx, create_tiny_vectors_batch_kernel).build()
+            self._programs['fit_vectors_at_positions_batch'] = cl.Program(self._ctx, fit_vectors_at_positions_batch_kernel).build()
 
             # 预先创建并存储内核实例，避免重复检索
             self._kernels['sum_adjacent_vectors'] = cl.Kernel(self._programs['sum_adjacent_vectors'], 'sum_adjacent_vectors')
             self._kernels['update_grid_with_adjacent_sum'] = cl.Kernel(self._programs['update_grid_with_adjacent_sum'], 'update_grid_with_adjacent_sum')
             self._kernels['create_tiny_vectors_batch'] = cl.Kernel(self._programs['create_tiny_vectors_batch'], 'create_tiny_vectors_batch_kernel')
+            self._kernels['fit_vectors_at_positions_batch'] = cl.Kernel(self._programs['fit_vectors_at_positions_batch'], 'fit_vectors_at_positions_batch_kernel')
         except Exception as e:
             print(f"[GPU计算] OpenCL程序编译失败: {e}")
             raise
@@ -446,6 +496,49 @@ class GPUVectorFieldCalculator:
         vy = (1 - wx) * (1 - wy) * v00[1] + wx * (1 - wy) * v01[1] + (1 - wx) * wy * v10[1] + wx * wy * v11[1]
 
         return (vx, vy)
+
+    def fit_vectors_at_positions_batch(self, grid: np.ndarray, positions: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
+        """批量拟合多个位置的向量值，使用GPU并行处理
+
+        Args:
+            grid: 向量场网格
+            positions: 位置列表，每个元素为 (x, y) 元组
+
+        Returns:
+            向量列表，每个元素为 (vx, vy) 元组
+        """
+        if not self._initialized:
+            raise RuntimeError("GPU计算器未初始化")
+
+        if not hasattr(grid, "ndim") or grid.ndim < 3 or grid.shape[2] < 2 or not positions:
+            return [(0.0, 0.0)] * len(positions)
+
+        h, w = grid.shape[0], grid.shape[1]
+        num_positions = len(positions)
+
+        # 将位置列表转换为numpy数组，确保是连续的float32数组
+        positions_array = np.array(positions, dtype=np.float32).flatten()
+
+        # 创建结果数组
+        results = np.zeros((num_positions, 2), dtype=np.float32)
+
+        # 创建OpenCL缓冲区
+        grid_buf = cl.Buffer(self._ctx, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=grid)
+        positions_buf = cl.Buffer(self._ctx, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=positions_array)
+        results_buf = cl.Buffer(self._ctx, cl.mem_flags.WRITE_ONLY, results.nbytes)
+
+        # 执行内核
+        self._kernels['fit_vectors_at_positions_batch'].set_args(
+            grid_buf, positions_buf, results_buf,
+            np.int32(w), np.int32(h), np.int32(num_positions)
+        )
+        cl.enqueue_nd_range_kernel(self._queue, self._kernels['fit_vectors_at_positions_batch'], (num_positions,), None)
+
+        # 读取结果
+        cl.enqueue_copy(self._queue, results, results_buf)
+
+        # 返回结果列表
+        return [(results[i, 0], results[i, 1]) for i in range(num_positions)]
 
     def cleanup(self) -> None:
         """清理资源"""

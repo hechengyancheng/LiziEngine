@@ -195,3 +195,19 @@ class CPUVectorFieldCalculator:
         vy = (1 - wx) * (1 - wy) * v00[1] + wx * (1 - wy) * v01[1] + (1 - wx) * wy * v10[1] + wx * wy * v11[1]
 
         return (vx, vy)
+
+    def fit_vectors_at_positions_batch(self, grid: np.ndarray, positions: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
+        """批量拟合多个位置的向量值，使用CPU并行处理
+
+        Args:
+            grid: 向量场网格
+            positions: 位置列表，每个元素为 (x, y) 元组
+
+        Returns:
+            向量列表，每个元素为 (vx, vy) 元组
+        """
+        if not hasattr(grid, "ndim") or grid.ndim < 3 or grid.shape[2] < 2 or not positions:
+            return [(0.0, 0.0)] * len(positions)
+
+        # 使用列表推导式批量处理
+        return [self.fit_vector_at_position(grid, x, y) for x, y in positions]
