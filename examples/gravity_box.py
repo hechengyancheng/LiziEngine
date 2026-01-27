@@ -63,14 +63,6 @@ def main():
     ui_manager = UIManager(app_core, window, controller, marker_system)
 
     # 定义回调函数
-    def on_space_press():
-        """重新生成切线模式并添加边缘向内向量"""
-        center = (grid.shape[1] // 2, grid.shape[0] // 2)
-        vector_calculator.create_tangential_pattern(grid, center=center, radius=50, magnitude=1.0)
-        # 添加边缘向内向量
-        add_inward_edge_vectors(grid, magnitude=0.5)
-        app_core.state_manager.update({"view_changed": True, "grid_updated": True})
-        print("[示例] 已重新生成切线模式并添加边缘向内向量")
 
     def on_u_press():
         """切换实时更新"""
@@ -79,7 +71,7 @@ def main():
         print(f"[示例] 实时更新: {status}")
 
     # 注册回调
-    ui_manager.register_callbacks(grid, on_space=on_space_press, on_u=on_u_press)
+    ui_manager.register_callbacks(grid, on_u=on_u_press)
 
     while not window.should_close:
         # 更新窗口和处理 UI 事件

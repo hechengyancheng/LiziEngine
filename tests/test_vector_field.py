@@ -49,32 +49,6 @@ class TestVectorFieldCalculator:
         # 中心值应该不同（因为有邻居影响）
         assert not np.array_equal(updated_grid[1, 1], original_grid[1, 1])
 
-    def test_create_radial_pattern(self):
-        """测试创建径向模式"""
-        grid = self.calculator.create_vector_grid(10, 10, (0.0, 0.0))
-        center = (5.0, 5.0)
-        radius = 3.0
-
-        result = self.calculator.create_radial_pattern(grid, center, radius, 1.0)
-
-        assert result.shape == grid.shape
-        # 检查是否有向量被创建（至少有一些点不为零）
-        has_vectors = np.any(result != 0.0)
-        assert has_vectors, "径向模式应该创建一些向量"
-
-    def test_create_tangential_pattern(self):
-        """测试创建切线模式"""
-        grid = self.calculator.create_vector_grid(10, 10, (0.0, 0.0))
-        center = (5.0, 5.0)
-        radius = 3.0
-
-        result = self.calculator.create_tangential_pattern(grid, center, radius, 1.0)
-
-        assert result.shape == grid.shape
-        # 中心点应该有向量
-        center_vx, center_vy = result[5, 5]
-        assert center_vx != 0.0 or center_vy != 0.0
-
     def test_add_vector_at_position(self):
         """测试在位置添加向量"""
         grid = self.calculator.create_vector_grid(5, 5, (0.0, 0.0))

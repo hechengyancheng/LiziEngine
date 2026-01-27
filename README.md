@@ -133,19 +133,6 @@ add_vector_at_position(grid, x, y, vx, vy)
 ```python
 create_tiny_vector(self, grid, x, y, mag)
 ```
-#### 径向模式 (Radial Pattern)
-向量从中心向外辐射，形成扩散效果（仅用于测试，只支持整数坐标）：
-
-```python
-create_radial_pattern(self, grid, center, radius, magnitude)
-```
-
-#### 切线模式 (Tangential Pattern)
-向量围绕中心旋转，形成漩涡效果（仅用于测试，只支持整数坐标）：
-
-```python
-create_tangential_pattern(self, grid, center, radius, magnitude)
-```
 
 ### CPU vs GPU 计算
 

@@ -148,92 +148,6 @@ class GPUVectorFieldCalculator:
         }
         """
 
-        # 创建径向模式程序
-        radial_pattern_kernel = """
-        __kernel void create_radial_pattern(
-            __global float2* grid,
-            const int width,
-            const int height,
-            const float center_x,
-            const float center_y,
-            const float radius,
-            const float magnitude
-        ) {
-            const int idx = get_global_id(0);
-            const int idy = get_global_id(1);
-
-            if (idx >= width || idy >= height) {
-                return;
-            }
-
-            // 计算到中心的距离
-            float dx = (float)idx - center_x;
-            float dy = (float)idy - center_y;
-            float dist = sqrt(dx * dx + dy * dy);
-
-            // 只处理在半径内且不在中心的点
-            if (dist >= radius || dist <= 0.0f) {
-                return;
-            }
-
-            // 计算径向角度
-            float angle = atan2(dy, dx);
-
-            // 计算向量大小（从中心向外递减）
-            float vec_magnitude = magnitude * (1.0f - (dist / radius));
-
-            // 计算向量分量
-            float vx = vec_magnitude * cos(angle);
-            float vy = vec_magnitude * sin(angle);
-
-            // 应用到网格
-            grid[idy * width + idx] += (float2)(vx, vy);
-        }
-        """
-
-        # 创建切线模式程序
-        tangential_pattern_kernel = """
-        __kernel void create_tangential_pattern(
-            __global float2* grid,
-            const int width,
-            const int height,
-            const float center_x,
-            const float center_y,
-            const float radius,
-            const float magnitude
-        ) {
-            const int idx = get_global_id(0);
-            const int idy = get_global_id(1);
-
-            if (idx >= width || idy >= height) {
-                return;
-            }
-
-            // 计算到中心的距离
-            float dx = (float)idx - center_x;
-            float dy = (float)idy - center_y;
-            float dist = sqrt(dx * dx + dy * dy);
-
-            // 只处理在半径内的点
-            if (dist > radius) {
-                return;
-            }
-
-            // 计算切线角度（径向角度+90度）
-            float angle = atan2(dy, dx) + M_PI_2;
-
-            // 计算向量大小（从中心向外递减）
-            float vec_magnitude = magnitude * (1.0f - (dist / radius));
-
-            // 计算向量分量
-            float vx = vec_magnitude * cos(angle);
-            float vy = vec_magnitude * sin(angle);
-
-            // 应用到网格
-            grid[idy * width + idx] += (float2)(vx, vy);
-        }
-        """
-
         # 批量创建微小向量程序
         create_tiny_vectors_batch_kernel = """
         __kernel void create_tiny_vectors_batch_kernel(
@@ -312,15 +226,11 @@ class GPUVectorFieldCalculator:
         try:
             self._programs['sum_adjacent_vectors'] = cl.Program(self._ctx, sum_adjacent_kernel).build()
             self._programs['update_grid_with_adjacent_sum'] = cl.Program(self._ctx, update_grid_kernel).build()
-            self._programs['create_radial_pattern'] = cl.Program(self._ctx, radial_pattern_kernel).build()
-            self._programs['create_tangential_pattern'] = cl.Program(self._ctx, tangential_pattern_kernel).build()
             self._programs['create_tiny_vectors_batch'] = cl.Program(self._ctx, create_tiny_vectors_batch_kernel).build()
 
             # 预先创建并存储内核实例，避免重复检索
             self._kernels['sum_adjacent_vectors'] = cl.Kernel(self._programs['sum_adjacent_vectors'], 'sum_adjacent_vectors')
             self._kernels['update_grid_with_adjacent_sum'] = cl.Kernel(self._programs['update_grid_with_adjacent_sum'], 'update_grid_with_adjacent_sum')
-            self._kernels['create_radial_pattern'] = cl.Kernel(self._programs['create_radial_pattern'], 'create_radial_pattern')
-            self._kernels['create_tangential_pattern'] = cl.Kernel(self._programs['create_tangential_pattern'], 'create_tangential_pattern')
             self._kernels['create_tiny_vectors_batch'] = cl.Kernel(self._programs['create_tiny_vectors_batch'], 'create_tiny_vectors_batch_kernel')
         except Exception as e:
             print(f"[GPU计算] OpenCL程序编译失败: {e}")
@@ -397,80 +307,6 @@ class GPUVectorFieldCalculator:
         if default != (0, 0):
             grid[:, :, 0] = default[0]
             grid[:, :, 1] = default[1]
-        return grid
-
-    def create_radial_pattern(self, grid: np.ndarray, center: Tuple[float, float] = None,
-                            radius: float = None, magnitude: float = 1.0) -> np.ndarray:
-        """使用GPU在网格上创建径向向量模式"""
-        if not self._initialized:
-            raise RuntimeError("GPU计算器未初始化")
-
-        if grid is None or not isinstance(grid, np.ndarray):
-            raise TypeError("grid 必须是 numpy.ndarray 类型")
-
-        h, w = grid.shape[:2]
-
-        # 如果未指定中心，则使用网格中心
-        if center is None:
-            center = (w // 2, h // 2)
-
-        # 如果未指定半径，则使用网格尺寸的1/4
-        if radius is None:
-            radius = min(w, h) // 4
-
-        cx, cy = center
-
-        # 创建OpenCL缓冲区
-        grid_buf = cl.Buffer(self._ctx, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=grid)
-
-        # 执行内核
-        self._kernels['create_radial_pattern'].set_args(
-            grid_buf, np.int32(w), np.int32(h),
-            np.float32(cx), np.float32(cy),
-            np.float32(radius), np.float32(magnitude)
-        )
-        cl.enqueue_nd_range_kernel(self._queue, self._kernels['create_radial_pattern'], (w, h), None)
-
-        # 读取结果
-        cl.enqueue_copy(self._queue, grid, grid_buf)
-
-        return grid
-
-    def create_tangential_pattern(self, grid: np.ndarray, center: Tuple[float, float] = None,
-                               radius: float = None, magnitude: float = 1.0) -> np.ndarray:
-        """使用GPU在网格上创建切线向量模式（旋转）"""
-        if not self._initialized:
-            raise RuntimeError("GPU计算器未初始化")
-
-        if grid is None or not isinstance(grid, np.ndarray):
-            raise TypeError("grid 必须是 numpy.ndarray 类型")
-
-        h, w = grid.shape[:2]
-
-        # 如果未指定中心，则使用网格中心
-        if center is None:
-            center = (w // 2, h // 2)
-
-        # 如果未指定半径，则使用网格尺寸的1/4
-        if radius is None:
-            radius = min(w, h) // 4
-
-        cx, cy = center
-
-        # 创建OpenCL缓冲区
-        grid_buf = cl.Buffer(self._ctx, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=grid)
-
-        # 执行内核
-        self._kernels['create_tangential_pattern'].set_args(
-            grid_buf, np.int32(w), np.int32(h),
-            np.float32(cx), np.float32(cy),
-            np.float32(radius), np.float32(magnitude)
-        )
-        cl.enqueue_nd_range_kernel(self._queue, self._kernels['create_tangential_pattern'], (w, h), None)
-
-        # 读取结果
-        cl.enqueue_copy(self._queue, grid, grid_buf)
-
         return grid
 
     def create_tiny_vector(self, grid: np.ndarray, x: float, y: float, mag: float = 1.0) -> None:

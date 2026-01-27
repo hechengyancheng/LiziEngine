@@ -29,9 +29,6 @@ from lizi_engine.compute.vector_field import vector_calculator
 # 创建向量网格
 grid = vector_calculator.create_vector_grid(width=640, height=480)
 
-# 创建径向向量场模式
-vector_calculator.create_radial_pattern(grid, center=(320, 240), radius=100, magnitude=1.0)
-
 # 更新向量场
 updated_grid = vector_calculator.update_grid_with_adjacent_sum(grid)
 ```
@@ -117,30 +114,6 @@ grid = vector_calculator.create_vector_grid(640, 480, (0.0, 0.0))
 ```python
 updated_grid = vector_calculator.update_grid_with_adjacent_sum(grid)
 ```
-
-##### create_radial_pattern(grid: np.ndarray, center: Tuple[float, float] = None, radius: float = None, magnitude: float = 1.0) -> np.ndarray
-
-创建径向向量场模式（从中心向外辐射）。
-
-**参数:**
-- `grid` (np.ndarray): 目标网格
-- `center` (Tuple[float, float]): 中心坐标，默认为网格中心
-- `radius` (float): 影响半径，默认为网格最小边长的一半
-- `magnitude` (float): 向量强度
-
-**返回值:** 修改后的网格
-
-##### create_tangential_pattern(grid: np.ndarray, center: Tuple[float, float] = None, radius: float = None, magnitude: float = 1.0) -> np.ndarray
-
-创建切线向量场模式（围绕中心旋转）。
-
-**参数:**
-- `grid` (np.ndarray): 目标网格
-- `center` (Tuple[float, float]): 中心坐标，默认为网格中心
-- `radius` (float): 影响半径，默认为网格最小边长的一半
-- `magnitude` (float): 向量强度
-
-**返回值:** 修改后的网格
 
 ##### add_vector_at_position(grid: np.ndarray, x: float, y: float, vx: float, vy: float) -> None
 

@@ -104,26 +104,6 @@ class VectorFieldCalculator(EventHandler):
 
         return calculator.create_vector_grid(width, height, default)
 
-    def create_radial_pattern(self, grid: np.ndarray, center: Tuple[float, float] = None,
-                            radius: float = None, magnitude: float = 1.0) -> np.ndarray:
-        """在网格上创建径向向量模式"""
-        # 根据当前设备选择计算器
-        calculator = self._gpu_calculator if self._current_device == "gpu" and self._gpu_calculator else self._cpu_calculator
-
-        result = calculator.create_radial_pattern(grid, center, radius, magnitude)
-
-        return result
-
-    def create_tangential_pattern(self, grid: np.ndarray, center: Tuple[float, float] = None,
-                               radius: float = None, magnitude: float = 1.0) -> np.ndarray:
-        """在网格上创建切线向量模式（旋转）"""
-        # 根据当前设备选择计算器
-        calculator = self._gpu_calculator if self._current_device == "gpu" and self._gpu_calculator else self._cpu_calculator
-
-        result = calculator.create_tangential_pattern(grid, center, radius, magnitude)
-
-        return result
-
     def create_tiny_vector(self, grid: np.ndarray, x: float, y: float, mag: float = 1.0) -> None:
         """在指定位置创建一个微小的向量场影响,只影响位置本身及上下左右四个邻居"""
         # 根据当前设备选择计算器

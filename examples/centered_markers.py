@@ -41,7 +41,7 @@ def main():
         return
 
     # 获取网格
-    grid = app_core.grid_manager.init_grid(64, 64)
+    grid = app_core.grid_manager.init_grid(128, 128)
 
     # 初始化视图
     try:
@@ -63,16 +63,6 @@ def main():
     # 初始化 UI 管理器并注册回调（与 patterns.py 保持一致）
     ui_manager = UIManager(app_core, window, controller, marker_system)
 
-    # 定义回调函数
-    def on_space_press():
-        """重新生成切线模式并添加边缘向内向量"""
-        center = (grid.shape[1] // 2, grid.shape[0] // 2)
-        vector_calculator.create_tangential_pattern(grid, center=center, radius=50, magnitude=1.0)
-        # 添加边缘向内向量
-        add_inward_edge_vectors(grid, magnitude=0.5)
-        app_core.state_manager.update({"view_changed": True, "grid_updated": True})
-        print("[示例] 已重新生成切线模式并添加边缘向内向量")
-
     def on_u_press():
         """切换实时更新"""
         ui_manager.enable_update = not ui_manager.enable_update
@@ -80,12 +70,12 @@ def main():
         print(f"[示例] 实时更新: {status}")
 
     # 注册回调
-    ui_manager.register_callbacks(grid, on_space=on_space_press, on_u=on_u_press)
+    ui_manager.register_callbacks(grid, on_u=on_u_press)
 
-    # 初始化500个标记在中心附近
+    # 初始化1500个标记在中心附近
     center_x = grid.shape[1] // 2
     center_y = grid.shape[0] // 2
-    for _ in range(500):
+    for _ in range(1500):
         offset_x = random.uniform(-5, 5)
         offset_y = random.uniform(-5, 5)
         marker_system.add_marker(center_x + offset_x, center_y + offset_y)
@@ -108,12 +98,12 @@ def main():
         # 实时更新向量场（如果启用）
         if ui_manager.enable_update:
             # 创建边缘向内向量
-            add_inward_edge_vectors(grid, magnitude=0.2)
+            add_inward_edge_vectors(grid, magnitude=0.5)
 
             # 更新标记位置（可选）
             try:
                 # 更新向量场和标记
-                marker_system.update_field_and_markers(grid, dt=1.0, gravity=0.005, speed_factor=0.9)
+                marker_system.update_field_and_markers(grid, dt=1.0, gravity=0.01, speed_factor=0.98)
             except Exception as e:
                 print(f"[错误] 更新标记异常: {e}")
 
