@@ -150,6 +150,20 @@ class GPUVectorFieldCalculator:
 
         # 批量创建微小向量程序
         create_tiny_vectors_batch_kernel = """
+        // 原子加法函数（用于float类型）
+        inline void atomicAddFloat(__global float* addr, float val) {
+            union {
+                unsigned int u32;
+                float f32;
+            } next, expected, current;
+            current.f32 = *addr;
+            do {
+                expected.f32 = current.f32;
+                next.f32 = expected.f32 + val;
+                current.u32 = atomic_cmpxchg((volatile __global unsigned int*)addr, expected.u32, next.u32);
+            } while (current.u32 != expected.u32);
+        }
+
         __kernel void create_tiny_vectors_batch_kernel(
             __global float* temp_grid,
             __global const float* positions,
@@ -162,9 +176,6 @@ class GPUVectorFieldCalculator:
             if (pos_idx >= num_positions) {
                 return;
             }
-
-            // 计算每个位置的网格偏移量
-            int grid_offset = pos_idx * (height * width * 2);
 
             // 获取当前位置（从展平数组中读取）
             int pos_base_idx = pos_idx * 3;
@@ -203,21 +214,21 @@ class GPUVectorFieldCalculator:
                 float w10 = (1.0f - wx) * wy;
                 float w11 = wx * wy;
 
-                // 计算网格索引（每个位置有自己的网格副本）
-                int base_idx00 = grid_offset + (y0 * width + x0) * 2;
-                int base_idx01 = grid_offset + (y0 * width + x1) * 2;
-                int base_idx10 = grid_offset + (y1 * width + x0) * 2;
-                int base_idx11 = grid_offset + (y1 * width + x1) * 2;
+                // 计算网格索引（直接写入共享临时缓冲区）
+                int base_idx00 = (y0 * width + x0) * 2;
+                int base_idx01 = (y0 * width + x1) * 2;
+                int base_idx10 = (y1 * width + x0) * 2;
+                int base_idx11 = (y1 * width + x1) * 2;
 
-                // 直接添加（每个位置写入自己的网格区域，无需原子操作）
-                temp_grid[base_idx00] += w00 * vx;
-                temp_grid[base_idx00 + 1] += w00 * vy;
-                temp_grid[base_idx01] += w01 * vx;
-                temp_grid[base_idx01 + 1] += w01 * vy;
-                temp_grid[base_idx10] += w10 * vx;
-                temp_grid[base_idx10 + 1] += w10 * vy;
-                temp_grid[base_idx11] += w11 * vx;
-                temp_grid[base_idx11 + 1] += w11 * vy;
+                // 使用原子操作累加到临时缓冲区
+                atomicAddFloat(&temp_grid[base_idx00], w00 * vx);
+                atomicAddFloat(&temp_grid[base_idx00 + 1], w00 * vy);
+                atomicAddFloat(&temp_grid[base_idx01], w01 * vx);
+                atomicAddFloat(&temp_grid[base_idx01 + 1], w01 * vy);
+                atomicAddFloat(&temp_grid[base_idx10], w10 * vx);
+                atomicAddFloat(&temp_grid[base_idx10 + 1], w10 * vy);
+                atomicAddFloat(&temp_grid[base_idx11], w11 * vx);
+                atomicAddFloat(&temp_grid[base_idx11 + 1], w11 * vy);
             }
         }
         """
@@ -398,8 +409,8 @@ class GPUVectorFieldCalculator:
         # 将位置列表转换为numpy数组，确保是连续的float32数组
         positions_array = np.array(positions, dtype=np.float32).flatten()
 
-        # 创建临时网格用于累积结果（每个位置有自己的网格副本）
-        temp_grid_flat = np.zeros((num_positions * h * w * 2,), dtype=np.float32)
+        # 创建临时网格用于累积结果（大小为网格大小，使用原子操作累加）
+        temp_grid_flat = np.zeros((h * w * 2,), dtype=np.float32)
 
         # 创建OpenCL缓冲区
         temp_grid_buf = cl.Buffer(self._ctx, cl.mem_flags.WRITE_ONLY, temp_grid_flat.nbytes)
@@ -415,9 +426,9 @@ class GPUVectorFieldCalculator:
         # 读取临时网格结果
         cl.enqueue_copy(self._queue, temp_grid_flat, temp_grid_buf)
 
-        # 将所有位置的网格累加到主网格
-        temp_grid = temp_grid_flat.reshape((num_positions, h, w, 2))
-        grid += np.sum(temp_grid, axis=0)
+        # 将累加结果添加到主网格
+        temp_grid = temp_grid_flat.reshape((h, w, 2))
+        grid += temp_grid
 
     def add_vector_at_position(self, grid: np.ndarray, x: float, y: float, vx: float, vy: float) -> None:
         """在浮点坐标处添加向量，使用双线性插值的逆方法，将向量分布到四个最近的整数坐标"""

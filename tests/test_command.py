@@ -100,7 +100,7 @@ class TestCommand:
         """测试执行未知命令"""
         result = self.command.execute("unknown_command")
         assert "错误: 未知命令 'unknown_command'" in result
-        assert "可用命令:" in result
+        assert "请使用 'help' 指令查看所有支持指令。" in result
 
     def test_execute_empty_command(self):
         """测试执行空命令"""
@@ -142,7 +142,7 @@ class TestCommand:
 
     def test_commands_dict_structure(self):
         """测试命令字典结构"""
-        expected_commands = ['reset_view', 'toggle_grid', 'clear_grid', 'switch_direction', 'set_speed', 'set_gravity', 'add_marker']
+        expected_commands = ['reset_view', 'toggle_grid', 'clear_grid', 'switch_direction', 'set_speed', 'set_gravity', 'add_marker', 'help']
         assert list(self.command.commands.keys()) == expected_commands
         for cmd in expected_commands:
             assert callable(self.command.commands[cmd])
