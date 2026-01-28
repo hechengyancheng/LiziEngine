@@ -108,7 +108,7 @@ class CommandDemoApp:
 
             # 实时更新向量场
             if self.ui_manager.enable_update:
-                add_inward_edge_vectors(self.grid, magnitude=0.5)
+                add_inward_edge_vectors(self.grid, magnitude=1.0)
                 try:
                     # 从状态管理器获取重力和速度因子参数
                     gravity = self.app_core.state_manager.get("gravity", 0.0)

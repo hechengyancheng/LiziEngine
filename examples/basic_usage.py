@@ -83,7 +83,7 @@ def main():
         # 实时更新向量场（如果启用）
         if ui_manager.enable_update:
             # 创建边缘向内向量
-            add_inward_edge_vectors(grid, magnitude=0.5)
+            add_inward_edge_vectors(grid, magnitude=1.0)
 
             # 更新标记位置（可选）
             try:
