@@ -279,6 +279,9 @@ class AppCore:
             self._renderer = VectorFieldRenderer()
             container.register_singleton(VectorFieldRenderer, self._renderer)
 
+        # 注册自己到容器
+        container.register_singleton(AppCore, self)
+
         # 发布应用初始化事件
         self._event_bus.publish(Event(
             EventType.APP_INITIALIZED,
@@ -347,4 +350,3 @@ class AppCore:
 container.register_singleton(StateManager, state_manager)
 container.register_singleton(ConfigManager, config_manager)
 container.register_singleton(Event, event_bus)
-container.register_singleton(AppCore, AppCore)

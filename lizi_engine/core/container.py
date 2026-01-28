@@ -37,7 +37,10 @@ class ServiceDescriptor:
     def _create_with_injection(self, container: 'Container', factory: Callable) -> Any:
         """通过依赖注入创建实例"""
         # 获取函数或类的类型提示
-        hints = get_type_hints(factory)
+        if isclass(factory):
+            hints = get_type_hints(factory.__init__)
+        else:
+            hints = get_type_hints(factory)
 
         # 获取参数列表
         if isclass(factory):
@@ -81,7 +84,7 @@ class Container:
     def __init__(self):
         self._services: Dict[Type, ServiceDescriptor] = {}
         self._instances: Dict[Type, Any] = {}
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
     def register(self, service_type: Type[T], factory: Callable, singleton: bool = True) -> None:
         """注册服务"""
@@ -91,7 +94,9 @@ class Container:
     def register_singleton(self, service_type: Type[T], instance: T) -> None:
         """注册单例实例"""
         with self._lock:
-            self._services[service_type] = ServiceDescriptor(lambda: instance, singleton=True)
+            descriptor = ServiceDescriptor(lambda: instance, singleton=True)
+            descriptor.instance = instance
+            self._services[service_type] = descriptor
             self._instances[service_type] = instance
 
     def register_transient(self, service_type: Type[T], factory: Callable) -> None:

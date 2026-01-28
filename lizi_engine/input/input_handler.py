@@ -112,7 +112,7 @@ class InputHandler(EventHandler):
                 "mods": mods
             }
         )
-        self._event_bus.publish(event)
+        event_bus.publish(event)
 
         # 执行注册的回调函数
         key_id = f"{key}_{action}"
@@ -177,7 +177,7 @@ class InputHandler(EventHandler):
                 "delta": (dx, dy)
             }
         )
-        self._event_bus.publish(event)
+        event_bus.publish(event)
 
     def handle_scroll_event(self, window, x: float, y: float):
         """处理鼠标滚轮事件
@@ -197,7 +197,7 @@ class InputHandler(EventHandler):
                 "offset": (x, y)
             }
         )
-        self._event_bus.publish(event)
+        event_bus.publish(event)
 
 
 # 创建全局输入处理器实例
