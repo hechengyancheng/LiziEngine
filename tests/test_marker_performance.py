@@ -65,7 +65,7 @@ def test_marker_update_performance(setup_performance_test):
 
         # 计时 update_markers
         start_time = time.perf_counter()
-        marker_system.update_markers(grid, dt=1.0, gravity=0.01, speed_factor=0.9, tiny_vectors=True)
+        marker_system.update_markers(grid, dt=1.0, gravity=0.01, speed_factor=0.9)
         update_time = time.perf_counter() - start_time
 
         # 直接计时 fit_vectors_at_positions_batch
