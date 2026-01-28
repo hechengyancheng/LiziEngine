@@ -35,16 +35,23 @@ class TestFPSLimiter:
 
     def test_fps_limiter_limit_fps(self):
         """测试FPS限制功能"""
-        # 设置较低的FPS目标以便测试
-        self.config_manager.set("target_fps", 10)
+        # 保存原始FPS值
+        original_fps = self.config_manager.get("target_fps")
 
-        import time
-        start_time = time.time()
-        self.fps_limiter.limit_fps()
-        end_time = time.time()
+        try:
+            # 设置较低的FPS目标以便测试
+            self.config_manager.set("target_fps", 10)
 
-        # 应该至少等待0.1秒（1/10 FPS）
-        assert end_time - start_time >= 0.09
+            import time
+            start_time = time.time()
+            self.fps_limiter.limit_fps()
+            end_time = time.time()
+
+            # 应该至少等待0.1秒（1/10 FPS）
+            assert end_time - start_time >= 0.09
+        finally:
+            # 恢复原始FPS值
+            self.config_manager.set("target_fps", original_fps)
 
     @patch('lizi_engine.core.app.time.time')
     def test_fps_limiter_handle_config_change(self, mock_time):
