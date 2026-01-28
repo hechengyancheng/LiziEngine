@@ -373,7 +373,7 @@ class GPUVectorFieldCalculator:
     def create_tiny_vector(self, grid: np.ndarray, x: float, y: float, mag: float = 1.0) -> None:
         """在指定位置创建一个微小的向量场影响,只影响位置本身及上下左右四个邻居"""
         if not self._initialized:
-            raise RuntimeError("GPU计算器未初始化")
+            return
 
         if not hasattr(grid, "ndim"):
             return
@@ -433,7 +433,7 @@ class GPUVectorFieldCalculator:
     def add_vector_at_position(self, grid: np.ndarray, x: float, y: float, vx: float, vy: float) -> None:
         """在浮点坐标处添加向量，使用双线性插值的逆方法，将向量分布到四个最近的整数坐标"""
         if not self._initialized:
-            raise RuntimeError("GPU计算器未初始化")
+            return
 
         if not hasattr(grid, "ndim") or grid.ndim < 3 or grid.shape[2] < 2:
             return
@@ -558,4 +558,5 @@ class GPUVectorFieldCalculator:
         if self._queue:
             del self._queue
         self._programs.clear()
+        self._kernels.clear()
         self._initialized = False

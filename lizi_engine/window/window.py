@@ -167,7 +167,7 @@ class Window(EventHandler):
         self._state_manager.set("viewport_height", height)
 
         # 发布窗口大小改变事件
-        self._event_bus.publish(Event(
+        event_bus.publish(Event(
             EventType.VIEW_CHANGED,
             {"width": width, "height": height},
             "Window"

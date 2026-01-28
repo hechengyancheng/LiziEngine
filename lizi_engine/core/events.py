@@ -202,7 +202,7 @@ class EventBus:
     def publish(self, event: Event) -> None:
         """发布事件"""
         # 检查递归深度
-        if self._recursion_depth > self._max_recursion_depth:
+        if self._recursion_depth >= self._max_recursion_depth:
             print(f"[事件系统] 警告: 事件递归深度超过限制 ({self._max_recursion_depth})，停止处理事件: {event.type}")
             return
 
