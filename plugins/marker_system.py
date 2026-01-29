@@ -63,7 +63,7 @@ class MarkerSystem:
         cell_size = self.app_core.state_manager.get("cell_size", 1.0)
 
         marker_positions = self._collect_marker_positions()
-        fitted_vectors = self._fit_vectors_batch(grid, marker_positions)
+        fitted_vectors = self._fit_vectors_batch(grid, marker_positions ,radius=2)
 
         new_markers = []
         for i, marker in enumerate(self.markers):
@@ -90,9 +90,9 @@ class MarkerSystem:
         """收集所有标记位置"""
         return [(m["x"], m["y"]) for m in self.markers]
 
-    def _fit_vectors_batch(self, grid: np.ndarray, positions: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
+    def _fit_vectors_batch(self, grid: np.ndarray, positions: List[Tuple[float, float]] , radius: int = 1) -> List[Tuple[float, float]]:
         """批量拟合向量值"""
-        return self.vector_calculator.fit_vectors_at_positions_batch(grid, positions)
+        return self.vector_calculator.fit_vectors_at_positions_batch(grid, positions , radius)
 
     def _update_single_marker(self, marker: Dict[str, float], fitted_vector: Tuple[float, float], dt: float, gravity: float, speed_factor: float, cell_size: float, w: int, h: int) -> Dict[str, float]:
         """更新单个标记"""
@@ -145,25 +145,25 @@ class MarkerSystem:
         self.markers = new_markers
         self._sync_to_state_manager()
 
-    def create_tiny_vector(self, grid: np.ndarray, x: float, y: float, mag: float = 1.0) -> None:
-        # 在指定位置创建一个微小的向量场影响,只影响位置本身及上下左右四个邻居
-        self.vector_calculator.create_tiny_vector(grid, x, y, mag)
+    def create_tiny_vector(self, grid: np.ndarray, x: float, y: float, mag: float = 1.0 , radius: int = 1) -> None:
+        # 在指定位置创建一个微小的向量场影响
+        self.vector_calculator.create_tiny_vector(grid, x, y, mag , radius)
 
     def add_vector_at_position(self, grid: np.ndarray, x: float, y: float, vx: float, vy: float) -> None:
         # 在指定位置添加一个向量
         self.vector_calculator.add_vector_at_position(grid, x, y, vx, vy)
         
 
-    def fit_vector_at_position(self, grid: np.ndarray, x: float, y: float) -> Tuple[float, float]:
+    def fit_vector_at_position(self, grid: np.ndarray, x: float, y: float ,radius: float = 1.0) -> Tuple[float, float]:
         # 在指定位置拟合一个向量
-        return self.vector_calculator.fit_vector_at_position(grid, x, y)
+        return self.vector_calculator.fit_vector_at_position(grid, x, y , radius)
 
     def update_field_and_markers(self, grid: np.ndarray, dt: float, gravity: float, speed_factor: float) -> None:
         # 更新向量场和标记
-        self.batch_create_tiny_vectors_from_markers(grid, self.markers)
+        self.batch_create_tiny_vectors_from_markers(grid, self.markers ,radius=2)
         self.update_markers(grid, dt=dt, gravity=gravity, speed_factor=speed_factor)
 
-    def batch_create_tiny_vectors_from_markers(self, grid: np.ndarray, markers: List[Dict[str, float]]) -> None:
+    def batch_create_tiny_vectors_from_markers(self, grid: np.ndarray, markers: List[Dict[str, float]], radius: int = 1) -> None:
         """收集标记位置以便批量创建微小向量影响。
 
         Args:
@@ -172,8 +172,7 @@ class MarkerSystem:
         """
         tiny_vector_positions = [(m["x"], m["y"], m["mag"]) for m in markers]
         if tiny_vector_positions:
-            self.vector_calculator.create_tiny_vectors_batch(grid, tiny_vector_positions)
-
+            self.vector_calculator.create_tiny_vectors_batch(grid, tiny_vector_positions, radius)
     def _sync_to_state_manager(self) -> None:
         """将标记列表同步到状态管理器"""
         try:

@@ -111,7 +111,7 @@ class VectorFieldCalculator(EventHandler):
 
         calculator.create_tiny_vector(grid, x, y, mag)
 
-    def create_tiny_vectors_batch(self, grid: np.ndarray, positions: List[Tuple[float, float, float]]) -> None:
+    def create_tiny_vectors_batch(self, grid: np.ndarray, positions: List[Tuple[float, float, float]], radius: int = 1) -> None:
         """批量创建微小向量影响，用于优化性能
 
         Args:
@@ -122,11 +122,11 @@ class VectorFieldCalculator(EventHandler):
         calculator = self._gpu_calculator if self._current_device == "gpu" and self._gpu_calculator else self._cpu_calculator
 
         if hasattr(calculator, 'create_tiny_vectors_batch'):
-            calculator.create_tiny_vectors_batch(grid, positions)
+            calculator.create_tiny_vectors_batch(grid, positions, radius)
         else:
             # 如果计算器不支持批量处理，回退到逐个处理
             for x, y, mag in positions:
-                calculator.create_tiny_vector(grid, x, y, mag)
+                calculator.create_tiny_vector(grid, x, y, mag, radius)
 
     def add_vector_at_position(self, grid: np.ndarray, x: float, y: float, vx: float, vy: float) -> None:
         """在浮点坐标处添加向量，使用双线性插值的逆方法，将向量分布到四个最近的整数坐标"""
@@ -135,19 +135,20 @@ class VectorFieldCalculator(EventHandler):
 
         calculator.add_vector_at_position(grid, x, y, vx, vy)
 
-    def fit_vector_at_position(self, grid: np.ndarray, x: float, y: float) -> Tuple[float, float]:
+    def fit_vector_at_position(self, grid: np.ndarray, x: float, y: float, radius: float = 1.0) -> Tuple[float, float]:
         """在浮点坐标处拟合向量值，使用双线性插值"""
         # 根据当前设备选择计算器
         calculator = self._gpu_calculator if self._current_device == "gpu" and self._gpu_calculator else self._cpu_calculator
 
-        return calculator.fit_vector_at_position(grid, x, y)
+        return calculator.fit_vector_at_position(grid, x, y, radius)
 
-    def fit_vectors_at_positions_batch(self, grid: np.ndarray, positions: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
+    def fit_vectors_at_positions_batch(self, grid: np.ndarray, positions: List[Tuple[float, float]], radius: float = 1.0) -> List[Tuple[float, float]]:
         """批量拟合多个位置的向量值
 
         Args:
             grid: 向量场网格
             positions: 位置列表，每个元素为 (x, y) 元组
+            radius: 拟合半径（仅CPU计算器支持）
 
         Returns:
             向量列表，每个元素为 (vx, vy) 元组
@@ -156,10 +157,15 @@ class VectorFieldCalculator(EventHandler):
         calculator = self._gpu_calculator if self._current_device == "gpu" and self._gpu_calculator else self._cpu_calculator
 
         if hasattr(calculator, 'fit_vectors_at_positions_batch'):
-            return calculator.fit_vectors_at_positions_batch(grid, positions)
+            # GPU计算器不支持radius参数，使用双线性插值
+            if self._current_device == "gpu":
+                return calculator.fit_vectors_at_positions_batch(grid, positions)
+            else:
+                # CPU计算器支持radius参数
+                return calculator.fit_vectors_at_positions_batch(grid, positions, radius)
         else:
             # 如果计算器不支持批量处理，回退到逐个处理
-            return [calculator.fit_vector_at_position(grid, x, y) for x, y in positions]
+            return [calculator.fit_vector_at_position(grid, x, y, radius) for x, y in positions]
 
     def handle(self, event: Event) -> None:
         """处理事件"""
